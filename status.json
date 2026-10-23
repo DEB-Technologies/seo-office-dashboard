@@ -1,5 +1,11 @@
 {
   "mode": "public_summary_only",
-  "generated_at": "2026-10-23T12:19:21.495397+00:00",
-  "task_count": 3
+  "generated_at": "2026-10-23T12:23:13.574100+00:00",
+  "task_count": 3,
+  "agent_counts": {
+    "technical": 3,
+    "content": 0,
+    "wordpress": 0,
+    "analytics": 0
+  }
 }
