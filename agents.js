@@ -9,13 +9,16 @@
   const detail = document.getElementById('agent-detail');
   const stationButtons = document.querySelectorAll('[data-agent]');
   if (!detail) return;
+  let agentCounts = null;
+  fetch('./status.json').then(response => response.json()).then(data => { if (data.mode === 'public_summary_only') agentCounts = data.agent_counts || null; }).catch(() => {});
   function open(agent) {
     const [name, description] = descriptions[agent] || ['Agent', 'Geen informatie beschikbaar'];
     detail.replaceChildren();
     const heading = document.createElement('strong');
     heading.textContent = name;
     const body = document.createElement('p');
-    body.textContent = description;
+    const count = agentCounts && agentCounts[agent];
+    body.textContent = description + (Number.isInteger(count) ? ' Openstaande taken: ' + count + '.' : ' Taakaantallen nog niet beschikbaar.');
     body.style.cssText = 'font-size:11px;color:#c1d2e4;line-height:1.5';
     const close = document.createElement('button');
     close.textContent = 'Sluiten ×';
