@@ -144,8 +144,8 @@ function character(color,atX,atZ){
 }
 // Characters can be upgraded with locally licensed GLB avatars without altering SEO logic.
 const characterManifest = [
- {key:'technical',model:'assets/agents/harper.glb',fallbackModel:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Soldier.glb'},
- {key:'content',model:'assets/agents/maya.glb',fallbackModel:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Xbot.glb'},
+ {key:'technical',model:'locomotion-collection-harper-3d-person-animated.glb',fallbackModel:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Soldier.glb'},
+ {key:'content',model:'locomotion-collection-maya-3d-person-animated.glb',fallbackModel:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Xbot.glb'},
  {key:'wordpress',model:'assets/agents/wordpress.glb'},
  {key:'analytics',model:'assets/agents/analytics.glb'},
  {key:'manager',model:'assets/agents/manager.glb'}
