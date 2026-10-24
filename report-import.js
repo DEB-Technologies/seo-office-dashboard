@@ -82,6 +82,28 @@
     const counter = document.getElementById('task-counter');
     if (counter) counter.textContent = String(data.tasks.length).padStart(2, '0');
   }
+  // Automatically show the latest sanitized public SEO proposals. Manual upload remains a fallback.
+  async function loadLatestSuggestions() {
+    try {
+      const response = await fetch('seo-suggestions.json?ts=' + Date.now(), {cache: 'no-store'});
+      if (!response.ok) throw new Error('Nog geen automatisch gepubliceerd rapport');
+      const data = await response.json();
+      if (!data || data.site_id !== 'autodaktenten' || data.mode !== 'read_only' ||
+          !Array.isArray(data.suggestions) || data.suggestions.length > 500 ||
+          data.suggestions.some(item => !item || typeof item.url !== 'string' ||
+            !item.url.startsWith('https://autodaktenten.be/') ||
+            !Array.isArray(item.issues) ||
+            ['proposed_title', 'proposed_meta_description'].some(k => item[k] != null && typeof item[k] !== 'string'))) {
+        throw new Error('Ongeldig automatisch rapport');
+      }
+      renderCopyReport(data);
+      const updated = data.generated_at ? new Date(data.generated_at).toLocaleString('nl-BE') : 'onbekend';
+      info.textContent = data.suggestions.length + ' SEO-voorstellen automatisch geladen · rapport van ' + updated + ' · alleen lezen, zelf kopiëren naar WordPress.';
+    } catch (error) {
+      info.textContent = 'Automatisch rapport nog niet beschikbaar. Je kunt voorlopig een JSON-bestand uploaden.';
+    }
+  }
+  loadLatestSuggestions();
   fileInput.addEventListener('change', async () => {
     const file = fileInput.files?.[0];
     if (!file) return;
