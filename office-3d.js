@@ -111,7 +111,7 @@ function character(color,atX,atZ){
 }
 // Characters can be upgraded with locally licensed GLB avatars without altering SEO logic.
 const characterManifest = [
- {key:'technical',model:'assets/agents/technical.glb'},
+ {key:'technical',model:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/RobotExpressive/RobotExpressive.glb'},
  {key:'content',model:'assets/agents/content.glb'},
  {key:'wordpress',model:'assets/agents/wordpress.glb'},
  {key:'analytics',model:'assets/agents/analytics.glb'},
@@ -148,7 +148,7 @@ characterManifest.forEach((entry,i)=>{
      const kind=/walk|run/.test(name)?'walk':/sit|type|work|idle|talk/.test(name)?'idle':null;
      if(kind&&!actions[kind])actions[kind]=mixer.clipAction(clip);
    });
-   if(!actions.idle&&gltf.animations.length)actions.idle=mixer.clipAction(gltf.animations[0]);
+   if(!actions.idle&&gltf.animations.length)actions.idle=mixer.clipAction(gltf.animations.find(c=>/idle/i.test(c.name))||gltf.animations[0]);
    actor.actions=actions;
    actor.activeAction=null;
    characterMixers.push(mixer);
@@ -212,7 +212,7 @@ canvas.addEventListener('click',e=>{
 let elapsed=0,last=0;
 const activity=['wandelt','werkt','overlegt'];
 const activityStatus=document.getElementById('world-activity');
-const clock=new THREE.Clock();
+
 function frame(t){
  const dt=Math.min(.06,(t-last)/1000||0);last=t;elapsed+=dt;
  characterMixers.forEach(mixer=>mixer.update(dt));
@@ -233,9 +233,9 @@ function frame(t){
       next.reset().fadeIn(.3).play();person.activeAction=next;
     }
   }
-  person.legs.forEach((leg,j)=>{leg.rotation.x=moving?Math.sin(elapsed*9+i+j*Math.PI)*.27:0});
-  person.arms.forEach((arm,j)=>{arm.rotation.x=moving?Math.sin(elapsed*9+i+(1-j)*Math.PI)*.28:-.2});
-  person.shoes.forEach((shoe,j)=>{shoe.position.z=moving?.1+Math.sin(elapsed*9+i+j*Math.PI)*.12:.1});
+  if(!person.model)person.legs.forEach((leg,j)=>{leg.rotation.x=moving?Math.sin(elapsed*9+i+j*Math.PI)*.27:0});
+  if(!person.model)person.arms.forEach((arm,j)=>{arm.rotation.x=moving?Math.sin(elapsed*9+i+(1-j)*Math.PI)*.28:-.2});
+  if(!person.model)person.shoes.forEach((shoe,j)=>{shoe.position.z=moving?.1+Math.sin(elapsed*9+i+j*Math.PI)*.12:.1});
  });
  }
  if(activityStatus&&Math.floor(elapsed)%6===0)activityStatus.textContent='3D-simulatie · medewerkers bewegen onafhankelijk van echte SEO-taken';
