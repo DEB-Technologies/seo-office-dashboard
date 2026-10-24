@@ -1,335 +1,169 @@
-/* Immersive Three.js SEO Office World. Visual-only, zero WordPress mutations. */
+/* SEO Office World: five-storey architectural cutaway, no character models or mutations. */
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js';
 
-const host = document.querySelector('.scene');
-const fallback = host?.querySelector('.world');
-if (!host || !fallback) throw new Error('3D scene container unavailable');
-const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
-const canvas = document.createElement('canvas');
-canvas.className = 'world-three-canvas';
-canvas.setAttribute('aria-label', 'Interactieve driedimensionale kantoorwereld met vier kamers en wandelende medewerkers');
-const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true, powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.45;
-host.prepend(canvas);
-fallback.style.display = 'none';
-host.classList.add('three-active');
-const scene = new THREE.Scene();
-scene.background = null;
-const camera = new THREE.PerspectiveCamera(35,1,.1,150);
-const ambient = new THREE.HemisphereLight(0xffffff,0xb3c3d8,2.15);scene.add(ambient);
-const sun = new THREE.DirectionalLight(0xffffff,3.0);
-sun.position.set(-9,17,13);sun.castShadow=true;
-sun.shadow.mapSize.set(2048,2048);
-sun.shadow.camera.left=-18;sun.shadow.camera.right=18;sun.shadow.camera.top=18;sun.shadow.camera.bottom=-18;
-sun.shadow.bias=-.0003;scene.add(sun);
-const mat=(c,roughness=.7,metalness=0)=>new THREE.MeshStandardMaterial({color:c,roughness,metalness});
-const materials={floor:mat('#e7eff7'),wall:mat('#ffffff'),glass:new THREE.MeshPhysicalMaterial({color:'#dceefa',transparent:true,opacity:.34,roughness:.12,metalness:.06,depthWrite:false}),wood:mat('#f6f9fc'),edge:mat('#b7c8dc'),dark:mat('#2b405c'),screen:mat('#70b8f6',.24,.15),green:mat('#76bc96'),skin:mat('#e7b68e'),hair:mat('#4a3941'),pot:mat('#d7e5ee'),plant:mat('#5fae7c')};
-const root=new THREE.Group();scene.add(root);
-function cube(parent,w,h,d,x,y,z,m,cast=true){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=cast;o.receiveShadow=true;parent.add(o);return o}
-function ball(parent,r,x,y,z,m){const o=new THREE.Mesh(new THREE.SphereGeometry(r,18,12),m);o.position.set(x,y,z);o.castShadow=true;parent.add(o);return o}
-function cyl(parent,top,bottom,height,x,y,z,m){const o=new THREE.Mesh(new THREE.CylinderGeometry(top,bottom,height,16),m);o.position.set(x,y,z);o.castShadow=true;parent.add(o);return o}
-cube(root,18,.6,18,0,-.3,0,materials.floor);
-cube(root,18,.36,18,0,-.76,0,materials.edge);
-for(let i=-7;i<=7;i+=2){cube(root,.025,.014,17,i,.017,0,mat('#dbe5f0'),false);cube(root,17,.014,.025,0,.017,i,mat('#dbe5f0'),false)}
-// Open-plan, modular rooms. Walls are kept low so the player can see every agent.
-const roomPositions=[[-4.5,-4.5],[4.5,-4.5],[-4.5,4.5],[4.5,4.5]];
-const roomNames=['Technical SEO Lab','Content Studio','WordPress Control','Analytics Lab'];
-const roomColors=['#6e9ee9','#ad9ce5','#e7b379','#7cc8b0'];
-const desks=[];
-const floorDirectory=[
- {name:'SEO Operations',status:'SEO-data / simulatie',rooms:['Technical SEO','Content Studio','Analytics Lab','Manager Office']},
- {name:'Social Media & Creative',status:'Toekomstige afdeling · preview',rooms:['Social Media','Content Creation','Video Studio','Campaign Planning']},
- {name:'Customer Experience',status:'Toekomstige afdeling · preview',rooms:['Klantenservice','Live Chat','Customer Success','Support Manager']},
- {name:'Marketing & Growth',status:'Toekomstige afdeling · preview',rooms:['Advertising','Email Marketing','CRO Lab','Growth Strategy']},
- {name:'Executive & Innovation',status:'Toekomstige afdeling · preview',rooms:['Directie','Vergaderen','AI Innovation','Mission Control']}
+const host=document.querySelector('.scene');
+const fallback=host?.querySelector('.world');
+if(!host||!fallback)throw new Error('Office scene not found');
+const canvas=document.createElement('canvas');
+canvas.className='world-three-canvas';
+canvas.setAttribute('aria-label','Interactief 3D-kantoorgebouw met vijf zichtbare verdiepingen. Klik een verdieping voor de taken.');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6));
+renderer.setSize(Math.max(host.clientWidth,1),Math.max(host.clientHeight,1),false);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.3;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(35,1,.1,200);
+const ambient=new THREE.HemisphereLight(0xffffff,0xc4d5e7,2.4);scene.add(ambient);
+const sun=new THREE.DirectionalLight(0xffffff,3.1);
+sun.position.set(-18,35,23);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-35;sun.shadow.camera.right=35;sun.shadow.camera.top=35;sun.shadow.camera.bottom=-35;scene.add(sun);
+const mat=(color,roughness=.65,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
+const white=mat('#f7fbff'),floorMat=mat('#dce7f2'),edge=mat('#829db8'),dark=mat('#283e5a'),desk=mat('#f0f6fd'),chair=mat('#536b89'),plant=mat('#5ca487'),pot=mat('#d0e0ea');
+const glass=new THREE.MeshPhysicalMaterial({color:'#a9d5f2',transparent:true,opacity:.22,roughness:.08,depthWrite:false,side:THREE.DoubleSide});
+const colors=['#75a8f0','#b2a2ec','#7ac5b5','#efbd86','#92b6da'];
+const departments=[
+ {name:'SEO Operations',rooms:['Technical SEO','Content Studio','WordPress Control','Analytics'],status:'SEO-rapporten beschikbaar'},
+ {name:'Social Media & Creative',rooms:['Social Media','Content Creation','Video Studio','Campagnes'],status:'Toekomstige afdeling · geen gekoppelde taken'},
+ {name:'Customer Experience',rooms:['Klantenservice','Live Chat','Customer Success','Support'],status:'Toekomstige afdeling · geen gekoppelde taken'},
+ {name:'Marketing & Growth',rooms:['Advertising','Email Marketing','CRO Lab','Growth'],status:'Toekomstige afdeling · geen gekoppelde taken'},
+ {name:'Executive & Innovation',rooms:['Directie','Vergaderen','AI Innovation','Mission Control'],status:'Toekomstige afdeling · geen gekoppelde taken'}
 ];
-const floorGroups=[];
-let selectedFloor=0;
-function buildPreviewFloor(index){
- const layer=new THREE.Group();layer.position.y=index*5.4;layer.visible=false;root.add(layer);
- cube(layer,17,.38,17,0,0,0,materials.floor);
- cube(layer,17,.28,17,0,-.35,0,materials.edge);
- const accents=['#8fa9cf','#b0a3d7','#7ab7b0','#d5b182','#94b5d5'];
- const tint=mat(accents[index]);
- for(let k=0;k<4;k++){
-  const x=k%2?4.4:-4.4,z=k<2?-4.4:4.4;
-  cube(layer,7,.12,.12,x,.1,z-3.45,materials.wall);
-  cube(layer,.12,.12,7,x-3.45,.1,z,materials.wall);
-  cube(layer,3.2,.15,1.5,x,.87,z,materials.wood);
-  for(const dx of [-1.3,1.3])for(const dz of [-.5,.5])cyl(layer,.05,.05,.72,x+dx,.45,z+dz,materials.edge);
-  cube(layer,1.15,.72,.08,x,1.5,z-.28,materials.dark);
-  cube(layer,1.03,.59,.025,x,1.5,z-.22,tint);
-  cube(layer,.12,.36,.12,x,1.03,z-.3,materials.edge);
-  cube(layer,1,.2,.8,x,.44,z+1.4,materials.dark);
-  cyl(layer,.29,.23,.48,x+2.3,.27,z+2.2,materials.pot);
-  ball(layer,.48,x+2.3,.84,z+2.2,materials.plant);
+const building=new THREE.Group();scene.add(building);
+function cube(parent,w,h,d,x,y,z,material,cast=true){
+ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+ m.position.set(x,y,z);m.castShadow=cast;m.receiveShadow=true;parent.add(m);return m;
+}
+function cylinder(parent,r,h,x,y,z,material){
+ const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.85,h,12),material);
+ m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;
+}
+const levels=[],pickables=[];
+const height=4.35;
+for(let i=0;i<5;i++){
+ const y=i*height;
+ const group=new THREE.Group();group.position.y=y;building.add(group);levels.push(group);
+ const accent=mat(colors[i],.42,.08);
+ cube(group,17,.36,11,0,-.18,0,floorMat);
+ cube(group,17,.18,.22,0,.05,5.45,edge);
+ cube(group,17,3.35,.16,0,1.7,-5.42,white);
+ cube(group,.2,3.35,11,-8.4,1.7,0,white);
+ cube(group,.2,3.35,11,8.4,1.7,0,white);
+ // Floor-to-ceiling glazed frontage: visible in full-building overview.
+ for(const x of [-6.3,-2.1,2.1,6.3]){
+  cube(group,.075,3.15,.1,x,1.65,5.4,edge,false);
  }
- // Decorative glass lift core; not a functional agent travel simulation.
- cube(layer,1.5,2.7,1.5,0,1.4,0,materials.glass,false);
- cube(layer,1.65,.16,1.65,0,2.8,0,tint);
- return layer;
-}
-const upperFloor = new THREE.Group();
-upperFloor.position.y = 5.4;
-upperFloor.visible = false;
-root.add(upperFloor);
-const upperMat = mat('#f5f9ff');
-cube(upperFloor,17,.38,17,0,0,0,upperMat);
-cube(upperFloor,17,.3,17,0,-.3,0,materials.edge);
-for (const [x,z] of [[-4.5,-4.5],[4.5,-4.5],[-4.5,4.5],[4.5,4.5]]) {
-  cube(upperFloor,7,.1,.12,x,.12,z-3.45,materials.wall);
-  cube(upperFloor,.12,.1,7,x-3.45,.12,z,materials.wall);
-  cube(upperFloor,3,.14,1.5,x,.85,z,materials.wood);
-  for (const dx of [-1.25,1.25]) for (const dz of [-.5,.5]) cyl(upperFloor,.06,.06,.72,x+dx,.45,z+dz,materials.edge);
-  cube(upperFloor,1,.8,.08,x,1.48,z-.25,materials.dark);
-  cube(upperFloor,.9,.68,.03,x,1.48,z-.19,materials.screen);
-  cyl(upperFloor,.3,.24,.48,x+2,.27,z+1.8,materials.pot);
-  ball(upperFloor,.48,x+2,.87,z+1.8,materials.plant);
-}
-// An optional second storey is a visual preview, not an activated SEO department.
-
-roomPositions.forEach(([x,z],i)=>{
- const color=mat(roomColors[i]);
- cube(root,7,.09,.08,x,.08,z-3.45,materials.wall);
- cube(root,.08,.1,7,x-3.45,.08,z,materials.wall);
- cube(root,3.6,.13,1.8,x,.84,z,materials.wood);
- for(const dx of [-1.5,1.5])for(const dz of [-.66,.66])cyl(root,.055,.055,.7,x+dx,.42,z+dz,materials.edge);
- cube(root,1.18,.8,.09,x,1.52,z-.32,materials.dark);
- cube(root,1.04,.65,.025,x,1.53,z-.26,color);
- cube(root,.12,.38,.1,x,1.01,z-.34,materials.edge);
- cube(root,.48,.045,.33,x,.87,z+.4,materials.edge);
- cube(root,1,.18,.8,x,.42,z+1.42,materials.dark);
- cube(root,.15,.66,.15,x,.54,z+1.83,materials.edge);
- cube(root,.88,.75,.15,x,.86,z+1.87,materials.dark);
- // Room glass separators: transparent, unobtrusive and physically modelled.
- if(i===0||i===2)cube(root,.08,1.25,5,x+3.38,.7,z,materials.glass,false);
- if(i===0||i===1)cube(root,5,1.25,.08,x,.7,z+3.38,materials.glass,false);
- // Plant.
- cyl(root,.34,.26,.55,x+2.4,.29,z-2.4,materials.pot);
- for(let j=0;j<5;j++)ball(root,.33,x+2.4+Math.sin(j*2.5)*.28,.75+j*.16,z-2.4+Math.cos(j*2.5)*.28,materials.plant);
- // Coloured overhead status beacons (not actual live activity).
- ball(root,.15,x+2.4,1.45,z+2.4,color);
- desks.push({x,z});
-});
-// Walkable corridor through centre, with decorative reception.
-cube(root,2.8,.13,1.1,0,.7,0,materials.wood);
-cube(root,2.5,.62,.22,0,.35,.43,materials.edge);
-function character(color,atX,atZ){
- const g=new THREE.Group();g.position.set(atX,0,atZ);root.add(g);
- const shirt=mat(color),pants=mat('#506782');
- cyl(g,.31,.37,.82,0,.95,0,shirt);
- ball(g,.28,0,1.65,0,materials.skin);
- const hair=ball(g,.29,0,1.85,-.025,materials.hair);hair.scale.y=.42;
- const legs=[];const arms=[];const shoes=[];
- // Articulated miniature avatar: hands, shoes, facial features and layered hair.
- const jacket=cube(g,.56,.12,.4,0,1.28,0,shirt);
- for(const side of [-1,1]){
-  ball(g,.042,side*.11,1.68,.255,materials.dark);
-  const shoe=cube(g,.22,.13,.36,side*.18,.075,.1,materials.dark);shoes.push(shoe);
+ const pane=cube(group,16.8,3.05,.055,0,1.63,5.4,glass,false);
+ pane.userData.floor=i;
+ cube(group,16.8,.14,.16,0,3.22,5.4,accent);
+ // Four furnished zones on every floor, without fictional staff.
+ for(let j=0;j<4;j++){
+  const x=-6.1+j*4.05;
+  cube(group,3.1,.13,1.45,x,.78,-.7,desk);
+  for(const dx of [-1.25,1.25])for(const dz of [-.52,.52])cylinder(group,.055,.7,x+dx,.39,-.7+dz,edge);
+  cube(group,1.12,.7,.07,x,1.38,-1.1,dark);
+  cube(group,1.0,.57,.025,x,1.4,-1.04,accent);
+  cube(group,.1,.28,.1,x,1.01,-1.12,edge);
+  cube(group,.78,.15,.8,x,.4,.8,chair);
+  cube(group,.12,.65,.12,x,.73,1.13,edge);
+  cube(group,.8,.65,.12,x,1.03,1.18,chair);
+  if(j<3)cube(group,.055,2.3,5,x+2,1.15,-.1,glass,false);
  }
- const nose=ball(g,.06,0,1.58,.27,materials.skin);
-
- for(const side of [-1,1]){
-  const leg=cyl(g,.105,.11,.57,side*.18,.31,0,pants);legs.push(leg);
-  const arm=cyl(g,.095,.09,.64,side*.41,1.05,0,shirt);arm.rotation.z=side*.16;arms.push(arm);
-  ball(g,.105,side*.41,.7,0,materials.skin);
- }
- return {g,legs,arms,shoes};
-}
-// Characters can be upgraded with locally licensed GLB avatars without altering SEO logic.
-const characterManifest = [
- {key:'technical',model:'locomotion-collection-harper-3d-person-animated.glb',fallbackModel:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Soldier.glb'},
- {key:'content',model:'locomotion-collection-maya-3d-person-animated.glb',fallbackModel:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Xbot.glb'},
- {key:'wordpress',model:'assets/agents/wordpress.glb'},
- {key:'analytics',model:'assets/agents/analytics.glb'},
- {key:'manager',model:'assets/agents/manager.glb'}
-];
-const characterMixers=[];
-const modelLoading={loaded:0,failed:0};
-const experience=document.createElement('div');
-experience.className='office-experience';
-experience.innerHTML='<div class="office-experience-title">SEO OFFICE WORLD <span>LIVE 3D</span></div><div class="office-experience-status" aria-live="polite">3D-personages laden…</div><div class="office-experience-actions"><button type="button" data-experience="focus">Bekijk medewerker</button><button type="button" data-experience="overview">Overzicht</button><button type="button" data-experience="motion" aria-pressed="false">Pauzeer beweging</button></div><div class="office-experience-hint">Sleep om te draaien · Scroll om te zoomen · Klik op een medewerker</div>';
-host.append(experience);
-const experienceStatus=experience.querySelector('.office-experience-status');
-const setExperienceStatus=message=>{if(experienceStatus)experienceStatus.textContent=message};
-const loader=new GLTFLoader();
-const characters=[
- character('#6498db',-4.5,-3.05),
- character('#aa8ed6',4.5,-3.05),
- character('#e4a870',-4.5,5.95),
- character('#6ebda0',4.5,5.95),
- character('#536f99',0,2.1)
-];
-// Load licensed rigged avatars only when provided. Missing files retain built-in 3D avatars.
-characterManifest.forEach((entry,i)=>{
- const loadAvatar=(url,allowFallback)=>loader.load(url,gltf=>{
-   const actor=characters[i];
-   const model=gltf.scene;
-   // Use external skeletal animation for human prototype; do not imply it is a photorealistic office avatar.
-   const bounds=new THREE.Box3().setFromObject(model);
-   const size=new THREE.Vector3();bounds.getSize(size);
-   if(!Number.isFinite(size.y)||size.y<.01)return;
-   model.scale.setScalar(1.95/size.y);
-   const updatedBounds=new THREE.Box3().setFromObject(model);
-   model.position.y=-updatedBounds.min.y;
-   model.traverse(obj=>{if(obj.isMesh){obj.castShadow=true;obj.receiveShadow=true}});
-   actor.g.add(model);
-   actor.g.children.forEach(child=>{if(child!==model)child.visible=false});
-   actor.model=model;
-   const mixer=new THREE.AnimationMixer(model);
-   const actions={};
-   gltf.animations.forEach(clip=>{
-     const name=clip.name.toLowerCase();
-     const kind=/walk|run/.test(name)?'walk':/sit|chair/.test(name)?'sit':/type|work/.test(name)?'work':/idle|stand|talk/.test(name)?'idle':null;
-     if(kind&&!actions[kind])actions[kind]=mixer.clipAction(clip);
-   });
-   if(!actions.idle&&gltf.animations.length)actions.idle=mixer.clipAction(gltf.animations.find(c=>/idle/i.test(c.name))||gltf.animations[0]);
-   actor.actions=actions;
-   actor.activeAction=null;
-   characterMixers.push(mixer);
-   modelLoading.loaded++;
-   host.dataset.avatarStatus='loaded-'+modelLoading.loaded;
-   setExperienceStatus(modelLoading.loaded+' geanimeerde 3D-medewerker(s) geladen · overige figuren blijven beschikbaar');
- },undefined,()=>{
-   if(allowFallback&&entry.fallbackModel){loadAvatar(entry.fallbackModel,false);return}
-   modelLoading.failed++;host.dataset.avatarStatus='fallback-'+modelLoading.failed;
-   setExperienceStatus('3D-modellen: '+modelLoading.loaded+' geladen, '+modelLoading.failed+' fallback · controleer bestandsnamen');
- });
- loadAvatar(entry.model,true);
-});
-const workstations=[[-4.5,-3.05],[4.5,-3.05],[-4.5,5.95],[4.5,5.95],[0,2.1]];
-const paths=[
- [[-4.5,-3.05],[-4.5,-1.1],[-2.2,-1.1],[-4.5,-3.05]],
- [[4.5,-3.05],[4.5,-1.1],[2.2,-1.1],[4.5,-3.05]],
- [[-4.5,5.95],[-4.5,3.0],[-2.1,3.0],[-4.5,5.95]],
- [[4.5,5.95],[4.5,3.0],[2.1,3.0],[4.5,5.95]],
- [[0,2.1],[0,0],[0,-2.3],[2,0],[-2,0],[0,2.1]]
-];
-let orbit=-.76,elevation=.89,distance=30,lightMode=0,floorLevel=0,focusedAgent=-1,paused=false;
-const orbitTarget=new THREE.Vector3(0,0,0);
-const cameraGoal=new THREE.Vector3(0,0,0);
-let targetDistance=30;
-function focusAgent(i){
- if(i<0||i>=characters.length)return;
- showFloor(0);
- focusedAgent=i;
- targetDistance=13;
- cameraGoal.copy(characters[i].g.position);cameraGoal.y=1.15;
- setExperienceStatus('Medewerker geselecteerd · klik op het personage voor agentdetails');
-}
-experience.querySelector('[data-experience="focus"]')?.addEventListener('click',()=>focusAgent(focusedAgent<0?0:(focusedAgent+1)%characters.length));
-experience.querySelector('[data-experience="overview"]')?.addEventListener('click',()=>{
- focusedAgent=-1;cameraGoal.set(0,selectedFloor*5.4,0);targetDistance=selectedFloor===0?30:34;
-});
-experience.querySelector('[data-experience="motion"]')?.addEventListener('click',e=>{
- paused=!paused;e.currentTarget.textContent=paused?'Hervat beweging':'Pauzeer beweging';
- e.currentTarget.setAttribute('aria-pressed',String(paused));
-});
-function updateCamera(){
- camera.position.set(Math.sin(orbit)*distance*Math.cos(elevation),Math.sin(elevation)*distance,Math.cos(orbit)*distance*Math.cos(elevation));
- camera.lookAt(orbitTarget);
-}
-function resize(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
-const ro=new ResizeObserver(resize);ro.observe(host);resize();updateCamera();
-// Room expansion is visual-only. Never infer that an SEO agent exists from a rendered room.
-const floorButton=document.getElementById('world-floor');
-const floorPanel=document.getElementById('floor-directory');
-const floorTitle=document.getElementById('floor-current');
-for(let i=1;i<floorDirectory.length;i++)floorGroups[i]=buildPreviewFloor(i);
-function showFloor(index){
- selectedFloor=index;
- upperFloor.visible=false;
- floorGroups.forEach(layer=>{if(layer)layer.visible=false});
- // Hide original office objects on preview floors, preserve original scene.
- root.children.forEach(child=>{
-  if(child===upperFloor||floorGroups.includes(child))return;
-  child.visible=index===0;
- });
- if(index>0)floorGroups[index].visible=true;
- focusedAgent=-1;
- cameraGoal.set(0,index*5.4,0);
- targetDistance=index===0?30:34;
- updateCamera();
- if(floorTitle)floorTitle.textContent='Verdieping '+(index+1)+' · '+floorDirectory[index].name;
- if(floorButton)floorButton.textContent='⌂ Verdieping '+(index+1)+' / '+floorDirectory.length;
- floorPanel?.querySelectorAll('[data-floor]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.floor)===index)));
-}
-floorButton?.addEventListener('click',()=>showFloor((selectedFloor+1)%floorDirectory.length));
-floorPanel?.querySelectorAll('[data-floor]').forEach(button=>button.addEventListener('click',()=>showFloor(Number(button.dataset.floor))));
-showFloor(0);
-function bind(id,fn){document.getElementById(id)?.addEventListener('click',fn)}
-bind('world-left',()=>{orbit-=.22;updateCamera()});
-bind('world-right',()=>{orbit+=.22;updateCamera()});
-bind('world-zoom-in',()=>{targetDistance=Math.max(9,targetDistance-2.5)});
-bind('world-zoom-out',()=>{targetDistance=Math.min(46,targetDistance+2.5)});
-bind('world-light',()=>{
- lightMode=(lightMode+1)%3;
- const states=[{sun:3,amb:2.15,ex:1.45},{sun:1.6,amb:1.4,ex:1.2},{sun:.45,amb:.9,ex:1.05}];
- sun.intensity=states[lightMode].sun;ambient.intensity=states[lightMode].amb;renderer.toneMappingExposure=states[lightMode].ex;
-});
-let pointer=null;
-canvas.addEventListener('pointerdown',e=>{pointer={x:e.clientX,y:e.clientY,orbit,elevation};canvas.setPointerCapture(e.pointerId)});
-canvas.addEventListener('pointermove',e=>{if(!pointer)return;orbit=pointer.orbit-(e.clientX-pointer.x)*.006;elevation=Math.max(.35,Math.min(1.37,pointer.elevation+(e.clientY-pointer.y)*.004));updateCamera()});
-canvas.addEventListener('pointerup',()=>{pointer=null});
-canvas.addEventListener('pointercancel',()=>{pointer=null});
-canvas.addEventListener('wheel',e=>{e.preventDefault();targetDistance=Math.max(9,Math.min(46,targetDistance+e.deltaY*.018))},{passive:false});
-const raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
-canvas.addEventListener('click',e=>{
- const rect=canvas.getBoundingClientRect();mouse.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);
- raycaster.setFromCamera(mouse,camera);
- const hits=raycaster.intersectObjects(characters.map(c=>c.g),true);
- if(!hits.length)return;
- let object=hits[0].object;
- while(object.parent&&!characters.some(c=>c.g===object))object=object.parent;
- const idx=characters.findIndex(c=>c.g===object);
- const key=['technical','content','wordpress','analytics'][idx];
- if(key){focusedAgent=idx;targetDistance=13;document.querySelector('.label[data-agent="'+key+'"]')?.click();}
-});
-let elapsed=0,last=0;
-const activity=['wandelt','werkt','overlegt'];
-const activityStatus=document.getElementById('world-activity');
-
-function frame(t){
- const dt=Math.min(.06,(t-last)/1000||0);last=t;elapsed+=dt;
- if(!paused&&!reduce.matches)characterMixers.forEach(mixer=>mixer.update(dt));
- if(!reduce.matches&&!paused){
- characters.forEach((person,i)=>{
-  const path=paths[i],period=i===4?22:18+i*2;
-  const cycle=elapsed/(period+12)+i*.18;
-  const phase=cycle-Math.floor(cycle);
-  const working=phase>.56;
-  const segment=working?0:(phase/.56*(path.length-1));
-  const k=Math.floor(segment),f=segment-k;
-  const a=path[k],b=path[(k+1)%path.length];
-  const x=a[0]+(b[0]-a[0])*f,z=a[1]+(b[1]-a[1])*f;
-  const moving=!working && Math.abs(b[0]-a[0])+Math.abs(b[1]-a[1])>.2;
-  person.g.position.set(x,moving?.035*Math.sin(elapsed*11+i):0,z);
-  if(working)person.g.rotation.y=Math.PI;
-  if(moving)person.g.rotation.y=Math.atan2(b[0]-a[0],b[1]-a[1]);
-  if(person.actions){
-    const next=moving?(person.actions.walk||person.actions.idle):(person.actions.work||person.actions.sit||person.actions.idle);
-    if(next&&next!==person.activeAction){
-      if(person.activeAction)person.activeAction.fadeOut(.3);
-      next.reset().fadeIn(.3).play();person.activeAction=next;
-    }
+ for(const x of [-7.5,7.5]){
+  cylinder(group,.28,.47,x,.25,3.8,pot);
+  for(let n=0;n<3;n++){
+   const leaf=new THREE.Mesh(new THREE.SphereGeometry(.36,12,8),plant);
+   leaf.position.set(x+Math.sin(n*2.1)*.22,.7+n*.21,3.8+Math.cos(n*2.1)*.2);
+   group.add(leaf);
   }
-  if(!person.model)person.legs.forEach((leg,j)=>{leg.rotation.x=moving?Math.sin(elapsed*9+i+j*Math.PI)*.27:0});
-  if(!person.model)person.arms.forEach((arm,j)=>{arm.rotation.x=moving?Math.sin(elapsed*9+i+(1-j)*Math.PI)*.28:-.2});
-  if(!person.model)person.shoes.forEach((shoe,j)=>{shoe.position.z=moving?.1+Math.sin(elapsed*9+i+j*Math.PI)*.12:.1});
- });
  }
- if(focusedAgent>=0&&selectedFloor===0){cameraGoal.copy(characters[focusedAgent].g.position);cameraGoal.y=1.15;}
- const smooth=1-Math.exp(-dt*5);
- orbitTarget.lerp(cameraGoal,smooth);
- distance+=(targetDistance-distance)*smooth;
- updateCamera();
- if(activityStatus&&Math.floor(elapsed)%6===0)activityStatus.textContent='3D-simulatie · medewerkers bewegen onafhankelijk van echte SEO-taken';
+ // Transparent lift core ties all storeys together.
+ cube(group,1.45,3.15,1.55,0,1.55,3.9,glass,false);
+ cube(group,1.6,.13,1.65,0,3.15,3.9,accent);
+ const picker=cube(group,16.8,3.1,.11,0,1.6,5.5,new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}),false);
+ picker.userData.floor=i;pickables.push(picker);
+ // Visible floor number plate.
+ const label=document.createElement('canvas');label.width=256;label.height=128;
+ const ctx=label.getContext('2d');ctx.fillStyle='#f9fcff';ctx.fillRect(0,0,256,128);
+ ctx.fillStyle='#1c3859';ctx.font='bold 88px sans-serif';ctx.textAlign='center';ctx.fillText(String(i+1).padStart(2,'0'),128,95);
+ const texture=new THREE.CanvasTexture(label);
+ const sign=new THREE.Mesh(new THREE.PlaneGeometry(1.7,.85),new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide}));
+ sign.position.set(-7.45,2.45,5.65);group.add(sign);
+}
+cube(building,18,.6,12,0,-.65,0,edge);
+cube(building,18,.23,12,0,5*height-.55,0,white);
+const foundation=cube(scene,24,.3,17,0,-1.12,0,mat('#cddde9'));
+const overlay=document.createElement('section');
+overlay.className='building-inspector';
+overlay.setAttribute('aria-label','Verdieping en taken');
+overlay.innerHTML='<div class="building-kicker">🏢 BEDRIJFSGEBOUW · 5 VERDIEPINGEN</div><h3 id="building-heading">Alle verdiepingen</h3><p id="building-description">Klik op een verdieping in het gebouw of kies er een uit het menu.</p><div id="building-rooms"></div><div class="building-task-title">Taken en status</div><div id="building-tasks" aria-live="polite">Kies een verdieping om de taken te bekijken.</div><button type="button" id="building-overview">↗ Toon volledig gebouw</button>';
+host.append(overlay);
+const heading=overlay.querySelector('#building-heading'),description=overlay.querySelector('#building-description'),rooms=overlay.querySelector('#building-rooms'),tasks=overlay.querySelector('#building-tasks');
+let selected=-1,orbit=-.52,elevation=.2,distance=65,goalDistance=65,goalY=8.5,light=0;
+const target=new THREE.Vector3(0,8.5,0),raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
+function renderTasks(){
+ if(selected<0){tasks.textContent='Selecteer een verdieping om de afdelingen en taken te bekijken.';return;}
+ if(selected>0){tasks.textContent='Nog geen gekoppelde taken. Deze afdeling is een toekomstige uitbreiding, geen actieve agent.';return;}
+ tasks.replaceChildren();
+ const info=document.createElement('p');info.textContent='SEO Operations · alleen-lezen. Echte taakdetails vind je in het bestaande rapport en de goedkeuringsinbox.';tasks.append(info);
+ const status=document.createElement('p');status.textContent='Taakaantal ophalen uit status.json…';tasks.append(status);
+ fetch('status.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('status unavailable');return r.json()}).then(data=>{
+  if(selected!==0)return;
+  status.textContent='Openstaande SEO-voorstellen volgens laatst gepubliceerd statusrapport: '+(Number.isFinite(data.task_count)?data.task_count:'onbekend')+'.';
+  const stamp=document.createElement('small');stamp.textContent='Rapportdatum: '+(data.generated_at||'onbekend')+' · Geen live taakuitvoering';tasks.append(stamp);
+ }).catch(()=>{if(selected===0)status.textContent='Statusrapport niet beschikbaar; open de bestaande takenlijst voor details.'});
+ const jump=document.createElement('button');jump.type='button';jump.textContent='↓ Bekijk SEO-taken en voorstellen';jump.addEventListener('click',()=>document.getElementById('tasks')?.scrollIntoView({behavior:'smooth',block:'start'}));tasks.append(jump);
+}
+function selectFloor(index){
+ selected=index;
+ if(index<0){goalY=8.5;goalDistance=65;heading.textContent='Alle verdiepingen';description.textContent='Klik op een verdieping in het gebouw of kies er een uit het menu.';rooms.replaceChildren();}
+ else{
+  goalY=index*height+1.2;goalDistance=27;
+  heading.textContent='Verdieping '+(index+1)+' · '+departments[index].name;
+  description.textContent=departments[index].status;
+  rooms.replaceChildren();
+  for(const name of departments[index].rooms){const item=document.createElement('span');item.textContent=name;rooms.append(item);}
+ }
+ levels.forEach((g,i)=>{g.traverse(o=>{if(o.isMesh&&o.material?.emissive&&o.material!==glass)o.material.emissiveIntensity=0;});g.scale.setScalar(1)});
+ document.querySelectorAll('#floor-directory [data-floor]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.floor)===index)));
+ const current=document.getElementById('floor-current');if(current)current.textContent=index<0?'Overzicht · alle vijf verdiepingen':heading.textContent;
+ const toggle=document.getElementById('world-floor');if(toggle)toggle.textContent=index<0?'⌂ Alle verdiepingen':'⌂ Verdieping '+(index+1)+' / 5';
+ renderTasks();
+}
+overlay.querySelector('#building-overview').addEventListener('click',()=>selectFloor(-1));
+document.querySelectorAll('#floor-directory [data-floor]').forEach(button=>button.addEventListener('click',()=>selectFloor(Number(button.dataset.floor))));
+document.getElementById('world-floor')?.addEventListener('click',()=>selectFloor(selected>=4?-1:selected+1));
+for(const [id,delta] of [['world-left',-.22],['world-right',.22]])document.getElementById(id)?.addEventListener('click',()=>{orbit+=delta});
+document.getElementById('world-zoom-in')?.addEventListener('click',()=>{goalDistance=Math.max(15,goalDistance-4)});
+document.getElementById('world-zoom-out')?.addEventListener('click',()=>{goalDistance=Math.min(90,goalDistance+4)});
+document.getElementById('world-light')?.addEventListener('click',()=>{light=(light+1)%3;sun.intensity=[3.1,1.5,.65][light];ambient.intensity=[2.4,1.6,1][light];renderer.toneMappingExposure=[1.3,1.2,1.05][light]});
+let drag=null;
+canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,orbit,elevation,moved:false};canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>6)drag.moved=true;orbit=drag.orbit-dx*.005;elevation=Math.max(-.15,Math.min(.65,drag.elevation+dy*.003))});
+canvas.addEventListener('pointerup',e=>{
+ if(!drag)return;const moved=drag.moved;drag=null;if(moved)return;
+ const rect=canvas.getBoundingClientRect();mouse.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);
+ raycaster.setFromCamera(mouse,camera);const hits=raycaster.intersectObjects(pickables,false);
+ if(hits.length)selectFloor(hits[0].object.userData.floor);
+});
+canvas.addEventListener('pointercancel',()=>{drag=null});
+canvas.addEventListener('wheel',e=>{e.preventDefault();goalDistance=Math.max(15,Math.min(90,goalDistance+e.deltaY*.035))},{passive:false});
+function resize(){const w=Math.max(host.clientWidth,1),h=Math.max(host.clientHeight,1);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+new ResizeObserver(resize).observe(host);
+host.prepend(canvas);fallback.style.display='none';host.classList.add('three-active');
+document.querySelectorAll('.scene .label,.scene .agent-alert,.scene .manager-label').forEach(el=>{el.style.display='none'});
+const oldExperience=host.querySelector('.office-experience');if(oldExperience)oldExperience.remove();
+selectFloor(-1);resize();
+let last=0;
+function frame(t){
+ const dt=Math.min(.08,(t-last)/1000||.016);last=t;
+ const a=1-Math.exp(-dt*4.5);target.y+=(goalY-target.y)*a;distance+=(goalDistance-distance)*a;
+ const angle=elevation+.28;
+ camera.position.set(target.x+Math.sin(orbit)*distance*Math.cos(angle),target.y+Math.sin(angle)*distance,target.z+Math.cos(orbit)*distance*Math.cos(angle));
+ camera.lookAt(target);
  renderer.render(scene,camera);
  requestAnimationFrame(frame);
 }
