@@ -152,6 +152,12 @@ const characterManifest = [
 ];
 const characterMixers=[];
 const modelLoading={loaded:0,failed:0};
+const experience=document.createElement('div');
+experience.className='office-experience';
+experience.innerHTML='<div class="office-experience-title">SEO OFFICE WORLD <span>LIVE 3D</span></div><div class="office-experience-status" aria-live="polite">3D-personages laden…</div><div class="office-experience-actions"><button type="button" data-experience="focus">Bekijk medewerker</button><button type="button" data-experience="overview">Overzicht</button><button type="button" data-experience="motion" aria-pressed="false">Pauzeer beweging</button></div><div class="office-experience-hint">Sleep om te draaien · Scroll om te zoomen · Klik op een medewerker</div>';
+host.append(experience);
+const experienceStatus=experience.querySelector('.office-experience-status');
+const setExperienceStatus=message=>{if(experienceStatus)experienceStatus.textContent=message};
 const loader=new GLTFLoader();
 const characters=[
  character('#6498db',-4.5,-3.05),
@@ -189,9 +195,11 @@ characterManifest.forEach((entry,i)=>{
    characterMixers.push(mixer);
    modelLoading.loaded++;
    host.dataset.avatarStatus='loaded-'+modelLoading.loaded;
+   setExperienceStatus(modelLoading.loaded+' geanimeerde 3D-medewerker(s) geladen · overige figuren blijven beschikbaar');
  },undefined,()=>{
    if(allowFallback&&entry.fallbackModel){loadAvatar(entry.fallbackModel,false);return}
    modelLoading.failed++;host.dataset.avatarStatus='fallback-'+modelLoading.failed;
+   setExperienceStatus('3D-modellen: '+modelLoading.loaded+' geladen, '+modelLoading.failed+' fallback · controleer bestandsnamen');
  });
  loadAvatar(entry.model,true);
 });
@@ -203,8 +211,26 @@ const paths=[
  [[4.5,5.95],[4.5,3.0],[2.1,3.0],[4.5,5.95]],
  [[0,2.1],[0,0],[0,-2.3],[2,0],[-2,0],[0,2.1]]
 ];
-let orbit=-.76,elevation=.89,distance=30,lightMode=0,floorLevel=0;
+let orbit=-.76,elevation=.89,distance=30,lightMode=0,floorLevel=0,focusedAgent=-1,paused=false;
 const orbitTarget=new THREE.Vector3(0,0,0);
+const cameraGoal=new THREE.Vector3(0,0,0);
+let targetDistance=30;
+function focusAgent(i){
+ if(i<0||i>=characters.length)return;
+ showFloor(0);
+ focusedAgent=i;
+ targetDistance=13;
+ cameraGoal.copy(characters[i].g.position);cameraGoal.y=1.15;
+ setExperienceStatus('Medewerker geselecteerd · klik op het personage voor agentdetails');
+}
+experience.querySelector('[data-experience="focus"]')?.addEventListener('click',()=>focusAgent(focusedAgent<0?0:(focusedAgent+1)%characters.length));
+experience.querySelector('[data-experience="overview"]')?.addEventListener('click',()=>{
+ focusedAgent=-1;cameraGoal.set(0,selectedFloor*5.4,0);targetDistance=selectedFloor===0?30:34;
+});
+experience.querySelector('[data-experience="motion"]')?.addEventListener('click',e=>{
+ paused=!paused;e.currentTarget.textContent=paused?'Hervat beweging':'Pauzeer beweging';
+ e.currentTarget.setAttribute('aria-pressed',String(paused));
+});
 function updateCamera(){
  camera.position.set(Math.sin(orbit)*distance*Math.cos(elevation),Math.sin(elevation)*distance,Math.cos(orbit)*distance*Math.cos(elevation));
  camera.lookAt(orbitTarget);
@@ -226,8 +252,9 @@ function showFloor(index){
   child.visible=index===0;
  });
  if(index>0)floorGroups[index].visible=true;
- orbitTarget.y=index*5.4;
- distance=index===0?30:34;
+ focusedAgent=-1;
+ cameraGoal.set(0,index*5.4,0);
+ targetDistance=index===0?30:34;
  updateCamera();
  if(floorTitle)floorTitle.textContent='Verdieping '+(index+1)+' · '+floorDirectory[index].name;
  if(floorButton)floorButton.textContent='⌂ Verdieping '+(index+1)+' / '+floorDirectory.length;
@@ -239,8 +266,8 @@ showFloor(0);
 function bind(id,fn){document.getElementById(id)?.addEventListener('click',fn)}
 bind('world-left',()=>{orbit-=.22;updateCamera()});
 bind('world-right',()=>{orbit+=.22;updateCamera()});
-bind('world-zoom-in',()=>{distance=Math.max(17,distance-2.5);updateCamera()});
-bind('world-zoom-out',()=>{distance=Math.min(46,distance+2.5);updateCamera()});
+bind('world-zoom-in',()=>{targetDistance=Math.max(9,targetDistance-2.5)});
+bind('world-zoom-out',()=>{targetDistance=Math.min(46,targetDistance+2.5)});
 bind('world-light',()=>{
  lightMode=(lightMode+1)%3;
  const states=[{sun:3,amb:2.15,ex:1.45},{sun:1.6,amb:1.4,ex:1.2},{sun:.45,amb:.9,ex:1.05}];
@@ -251,7 +278,7 @@ canvas.addEventListener('pointerdown',e=>{pointer={x:e.clientX,y:e.clientY,orbit
 canvas.addEventListener('pointermove',e=>{if(!pointer)return;orbit=pointer.orbit-(e.clientX-pointer.x)*.006;elevation=Math.max(.35,Math.min(1.37,pointer.elevation+(e.clientY-pointer.y)*.004));updateCamera()});
 canvas.addEventListener('pointerup',()=>{pointer=null});
 canvas.addEventListener('pointercancel',()=>{pointer=null});
-canvas.addEventListener('wheel',e=>{e.preventDefault();distance=Math.max(17,Math.min(46,distance+e.deltaY*.018));updateCamera()},{passive:false});
+canvas.addEventListener('wheel',e=>{e.preventDefault();targetDistance=Math.max(9,Math.min(46,targetDistance+e.deltaY*.018))},{passive:false});
 const raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
 canvas.addEventListener('click',e=>{
  const rect=canvas.getBoundingClientRect();mouse.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);
@@ -262,7 +289,7 @@ canvas.addEventListener('click',e=>{
  while(object.parent&&!characters.some(c=>c.g===object))object=object.parent;
  const idx=characters.findIndex(c=>c.g===object);
  const key=['technical','content','wordpress','analytics'][idx];
- if(key)document.querySelector('.label[data-agent="'+key+'"]')?.click();
+ if(key){focusedAgent=idx;targetDistance=13;document.querySelector('.label[data-agent="'+key+'"]')?.click();}
 });
 let elapsed=0,last=0;
 const activity=['wandelt','werkt','overlegt'];
@@ -270,8 +297,8 @@ const activityStatus=document.getElementById('world-activity');
 
 function frame(t){
  const dt=Math.min(.06,(t-last)/1000||0);last=t;elapsed+=dt;
- characterMixers.forEach(mixer=>mixer.update(dt));
- if(!reduce.matches){
+ if(!paused&&!reduce.matches)characterMixers.forEach(mixer=>mixer.update(dt));
+ if(!reduce.matches&&!paused){
  characters.forEach((person,i)=>{
   const path=paths[i],period=i===4?22:18+i*2;
   const cycle=elapsed/(period+12)+i*.18;
@@ -297,6 +324,11 @@ function frame(t){
   if(!person.model)person.shoes.forEach((shoe,j)=>{shoe.position.z=moving?.1+Math.sin(elapsed*9+i+j*Math.PI)*.12:.1});
  });
  }
+ if(focusedAgent>=0&&selectedFloor===0){cameraGoal.copy(characters[focusedAgent].g.position);cameraGoal.y=1.15;}
+ const smooth=1-Math.exp(-dt*5);
+ orbitTarget.lerp(cameraGoal,smooth);
+ distance+=(targetDistance-distance)*smooth;
+ updateCamera();
  if(activityStatus&&Math.floor(elapsed)%6===0)activityStatus.textContent='3D-simulatie · medewerkers bewegen onafhankelijk van echte SEO-taken';
  renderer.render(scene,camera);
  requestAnimationFrame(frame);
