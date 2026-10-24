@@ -24,3 +24,8 @@ Voor betere resultaten moeten alle clips dezelfde rig delen, de voeten op de gro
 4. Controleer dat geïmporteerde SEO-rapporten read-only blijven en dat demo-acties geen WordPress-publicatie starten.
 
 De tweede verdieping is op dit moment een **visuele preview**. Extra agentfunctionaliteit of echte SEO-automatisering wordt niet ingeschakeld door het bouwen van een ruimte.
+
+## Eerste geïnstalleerde geanimeerde 3D-avatar
+De Technical SEO-agent laadt nu het externe `RobotExpressive.glb` via jsDelivr uit `mrdoob/three.js@r160/examples/models/gltf/RobotExpressive/`. Het is een **robot-prototype**, geen realistisch mens. Het bronmodel is van Tomás Laulhé, aangepast door Don McCurdy, en wordt in de upstream README onder **CC0 1.0** aangeboden: https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/RobotExpressive/README.md . De bron-GLB heeft ingebouwde animatieclips. Als CDN of WebGL faalt, blijft de geometrische fallback beschikbaar.
+
+Voor productie met menselijke avatars: selecteer assets met aantoonbare rechten, lever GLB-bestanden met in-place walk, idle, sit en type clips aan, en valideer elke clip in de browser. Dit is **nog niet** geleverd.
