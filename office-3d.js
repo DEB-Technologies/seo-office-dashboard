@@ -41,6 +41,25 @@ const roomPositions=[[-4.5,-4.5],[4.5,-4.5],[-4.5,4.5],[4.5,4.5]];
 const roomNames=['Technical SEO Lab','Content Studio','WordPress Control','Analytics Lab'];
 const roomColors=['#6e9ee9','#ad9ce5','#e7b379','#7cc8b0'];
 const desks=[];
+const upperFloor = new THREE.Group();
+upperFloor.position.y = 5.4;
+upperFloor.visible = false;
+root.add(upperFloor);
+const upperMat = mat('#f5f9ff');
+cube(upperFloor,17,.38,17,0,0,0,upperMat);
+cube(upperFloor,17,.3,17,0,-.3,0,materials.edge);
+for (const [x,z] of [[-4.5,-4.5],[4.5,-4.5],[-4.5,4.5],[4.5,4.5]]) {
+  cube(upperFloor,7,.1,.12,x,.12,z-3.45,materials.wall);
+  cube(upperFloor,.12,.1,7,x-3.45,.12,z,materials.wall);
+  cube(upperFloor,3,.14,1.5,x,.85,z,materials.wood);
+  for (const dx of [-1.25,1.25]) for (const dz of [-.5,.5]) cyl(upperFloor,.06,.06,.72,x+dx,.45,z+dz,materials.edge);
+  cube(upperFloor,1,.8,.08,x,1.48,z-.25,materials.dark);
+  cube(upperFloor,.9,.68,.03,x,1.48,z-.19,materials.screen);
+  cyl(upperFloor,.3,.24,.48,x+2,.27,z+1.8,materials.pot);
+  ball(upperFloor,.48,x+2,.87,z+1.8,materials.plant);
+}
+// An optional second storey is a visual preview, not an activated SEO department.
+
 roomPositions.forEach(([x,z],i)=>{
  const color=mat(roomColors[i]);
  cube(root,7,.09,.08,x,.08,z-3.45,materials.wall);
@@ -73,13 +92,21 @@ function character(color,atX,atZ){
  cyl(g,.31,.37,.82,0,.95,0,shirt);
  ball(g,.28,0,1.65,0,materials.skin);
  const hair=ball(g,.29,0,1.85,-.025,materials.hair);hair.scale.y=.42;
- const legs=[];
+ const legs=[];const arms=[];const shoes=[];
+ // Articulated miniature avatar: hands, shoes, facial features and layered hair.
+ const jacket=cube(g,.56,.12,.4,0,1.28,0,shirt);
+ for(const side of [-1,1]){
+  ball(g,.042,side*.11,1.68,.255,materials.dark);
+  const shoe=cube(g,.22,.13,.36,side*.18,.075,.1,materials.dark);shoes.push(shoe);
+ }
+ const nose=ball(g,.06,0,1.58,.27,materials.skin);
+
  for(const side of [-1,1]){
   const leg=cyl(g,.105,.11,.57,side*.18,.31,0,pants);legs.push(leg);
-  const arm=cyl(g,.095,.09,.64,side*.41,1.05,0,shirt);arm.rotation.z=side*.16;
+  const arm=cyl(g,.095,.09,.64,side*.41,1.05,0,shirt);arm.rotation.z=side*.16;arms.push(arm);
   ball(g,.105,side*.41,.7,0,materials.skin);
  }
- return {g,legs};
+ return {g,legs,arms,shoes};
 }
 const characters=[
  character('#6498db',-4.5,-3.05),
@@ -95,7 +122,7 @@ const paths=[
  [[4.5,5.95],[4.5,3.0],[2.1,3.0],[4.5,5.95]],
  [[0,2.1],[0,0],[0,-2.3],[2,0],[-2,0],[0,2.1]]
 ];
-let orbit=-.76,elevation=.89,distance=30,lightMode=0;
+let orbit=-.76,elevation=.89,distance=30,lightMode=0,floorLevel=0;
 const orbitTarget=new THREE.Vector3(0,0,0);
 function updateCamera(){
  camera.position.set(Math.sin(orbit)*distance*Math.cos(elevation),Math.sin(elevation)*distance,Math.cos(orbit)*distance*Math.cos(elevation));
@@ -103,6 +130,17 @@ function updateCamera(){
 }
 function resize(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 const ro=new ResizeObserver(resize);ro.observe(host);resize();updateCamera();
+const floorButton=document.getElementById('world-floor');
+floorButton?.addEventListener('click',()=>{
+ floorLevel=(floorLevel+1)%2;
+ upperFloor.visible=Boolean(floorLevel);
+ root.children.forEach(obj=>{if(obj!==upperFloor && obj.material && obj.material.transparent)obj.visible=!floorLevel});
+ orbitTarget.y=floorLevel?5.4:0;
+ distance=floorLevel?34:30;
+ updateCamera();
+ floorButton.textContent=floorLevel?'⌂ Verdieping 2 · preview':'⌂ Begane grond';
+ floorButton.setAttribute('aria-pressed',String(Boolean(floorLevel)));
+});
 function bind(id,fn){document.getElementById(id)?.addEventListener('click',fn)}
 bind('world-left',()=>{orbit-=.22;updateCamera()});
 bind('world-right',()=>{orbit+=.22;updateCamera()});
@@ -145,6 +183,8 @@ function frame(t){
   person.g.position.set(x,moving?.035*Math.sin(elapsed*11+i):0,z);
   if(moving)person.g.rotation.y=Math.atan2(b[0]-a[0],b[1]-a[1]);
   person.legs.forEach((leg,j)=>{leg.rotation.x=moving?Math.sin(elapsed*9+i+j*Math.PI)*.27:0});
+  person.arms.forEach((arm,j)=>{arm.rotation.x=moving?Math.sin(elapsed*9+i+(1-j)*Math.PI)*.28:-.2});
+  person.shoes.forEach((shoe,j)=>{shoe.position.z=moving?.1+Math.sin(elapsed*9+i+j*Math.PI)*.12:.1});
  });
  }
  renderer.render(scene,camera);
