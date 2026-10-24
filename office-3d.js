@@ -6,7 +6,7 @@ const fallback=host?.querySelector('.world');
 if(!host||!fallback)throw new Error('Office scene not found');
 const canvas=document.createElement('canvas');
 canvas.className='world-three-canvas';
-canvas.setAttribute('aria-label','Interactief 3D-kantoorgebouw met vijf zichtbare verdiepingen. Klik een verdieping voor de taken.');
+canvas.setAttribute('aria-label','3D-kantoorgebouw: klik een verdieping om de kamer te openen; klik een digitaal agent-werkstation voor de laatst gerapporteerde taken.');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6));
 renderer.setSize(Math.max(host.clientWidth,1),Math.max(host.clientHeight,1),false);
@@ -41,7 +41,7 @@ function cylinder(parent,r,h,x,y,z,material){
  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.85,h,12),material);
  m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;
 }
-const levels=[],pickables=[];
+const levels=[],pickables=[],agents=[],agentPickables=[];
 const height=4.35;
 for(let i=0;i<5;i++){
  const y=i*height;
@@ -71,6 +71,16 @@ for(let i=0;i<5;i++){
   cube(group,.12,.65,.12,x,.73,1.13,edge);
   cube(group,.8,.65,.12,x,1.03,1.18,chair);
   if(j<3)cube(group,.055,2.3,5,x+2,1.15,-.1,glass,false);
+  // Stylized digital agent terminal; intentionally no human avatars or Maya/Harper assets.
+  const terminal=new THREE.Group();terminal.position.set(x,0,1.85);group.add(terminal);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.35,.065,10,32),accent);
+  ring.rotation.x=Math.PI/2;ring.position.y=1.05;terminal.add(ring);
+  const core=new THREE.Mesh(new THREE.IcosahedronGeometry(.25,1),new THREE.MeshStandardMaterial({color:colors[i],emissive:colors[i],emissiveIntensity:.35,metalness:.3,roughness:.25}));
+  core.position.y=1.05;terminal.add(core);
+  const pedestal=cylinder(terminal,.28,.14,0,.16,0,dark);
+  core.userData.agent={floor:i,index:j};ring.userData.agent={floor:i,index:j};
+  agentPickables.push(core,ring);
+  agents.push({floor:i,index:j,core,ring,terminal,phase:i*1.5+j*1.2});
  }
  for(const x of [-7.5,7.5]){
   cylinder(group,.28,.47,x,.25,3.8,pot);
@@ -102,32 +112,48 @@ overlay.setAttribute('aria-label','Verdieping en taken');
 overlay.innerHTML='<div class="building-kicker">🏢 BEDRIJFSGEBOUW · 5 VERDIEPINGEN</div><h3 id="building-heading">Alle verdiepingen</h3><p id="building-description">Klik op een verdieping in het gebouw of kies er een uit het menu.</p><div id="building-rooms"></div><div class="building-task-title">Taken en status</div><div id="building-tasks" aria-live="polite">Kies een verdieping om de taken te bekijken.</div><button type="button" id="building-overview">↗ Toon volledig gebouw</button>';
 host.append(overlay);
 const heading=overlay.querySelector('#building-heading'),description=overlay.querySelector('#building-description'),rooms=overlay.querySelector('#building-rooms'),tasks=overlay.querySelector('#building-tasks');
-let selected=-1,orbit=-.52,elevation=.2,distance=65,goalDistance=65,goalY=8.5,light=0;
+let selected=-1,selectedAgent=-1,orbit=-.52,elevation=.2,distance=65,goalDistance=65,goalY=8.5,light=0,roomMode=false;
 const target=new THREE.Vector3(0,8.5,0),raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
+const agentLabels=['Technical SEO Agent','Content Agent','WordPress Agent','Analytics Agent'];
+const agentKeys=['technical','content','wordpress','analytics'];
+let lastStatus=null;
+async function refreshAgentStatus(){
+ try{const res=await fetch('status.json',{cache:'no-store'});if(res.ok)lastStatus=await res.json()}catch(e){/* Preserve offline/preview mode */ }
+ if(selected===0)renderTasks();
+}
 function renderTasks(){
  if(selected<0){tasks.textContent='Selecteer een verdieping om de afdelingen en taken te bekijken.';return;}
- if(selected>0){tasks.textContent='Nog geen gekoppelde taken. Deze afdeling is een toekomstige uitbreiding, geen actieve agent.';return;}
+ if(selected>0){tasks.textContent='Digitale werkstations zijn een visuele preview. Er zijn geen gekoppelde agents of taken voor deze afdeling.';return;}
  tasks.replaceChildren();
- const info=document.createElement('p');info.textContent='SEO Operations · alleen-lezen. Echte taakdetails vind je in het bestaande rapport en de goedkeuringsinbox.';tasks.append(info);
- const status=document.createElement('p');status.textContent='Taakaantal ophalen uit status.json…';tasks.append(status);
+ const info=document.createElement('p');info.textContent=selectedAgent<0?'Selecteer een digitaal agent-werkstation in deze ruimte. Status is afkomstig uit het laatst gepubliceerde rapport, niet uit live agentactiviteit.':agentLabels[selectedAgent]+' · status volgens gepubliceerd SEO-rapport (alleen-lezen).';tasks.append(info);
+ if(lastStatus){
+  const counts=lastStatus.agent_counts||{};
+  const indexes=selectedAgent<0?[0,1,2,3]:[selectedAgent];
+  for(const i of indexes){const p=document.createElement('p');p.textContent=agentLabels[i]+': '+(Number.isFinite(counts[agentKeys[i]])?counts[agentKeys[i]]:'?')+' openstaande voorstel(len)';tasks.append(p);}
+  const stamp=document.createElement('small');stamp.textContent='Laatst bijgewerkt: '+(lastStatus.generated_at||'onbekend')+' · Geen live uitvoering';tasks.append(stamp);
+ }
+ const status=document.createElement('p');status.textContent=lastStatus?'Totaal volgens rapport: '+lastStatus.task_count+' voorstel(len).':'Taakaantal ophalen uit status.json…';tasks.append(status);
  fetch('status.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('status unavailable');return r.json()}).then(data=>{
   if(selected!==0)return;
+  lastStatus=data;
   status.textContent='Openstaande SEO-voorstellen volgens laatst gepubliceerd statusrapport: '+(Number.isFinite(data.task_count)?data.task_count:'onbekend')+'.';
   const stamp=document.createElement('small');stamp.textContent='Rapportdatum: '+(data.generated_at||'onbekend')+' · Geen live taakuitvoering';tasks.append(stamp);
  }).catch(()=>{if(selected===0)status.textContent='Statusrapport niet beschikbaar; open de bestaande takenlijst voor details.'});
  const jump=document.createElement('button');jump.type='button';jump.textContent='↓ Bekijk SEO-taken en voorstellen';jump.addEventListener('click',()=>document.getElementById('tasks')?.scrollIntoView({behavior:'smooth',block:'start'}));tasks.append(jump);
 }
 function selectFloor(index){
- selected=index;
+ selected=index;selectedAgent=-1;roomMode=index>=0;
+ levels.forEach((g,i)=>{g.visible=index<0||i===index});
+ foundation.visible=index<0;
  if(index<0){goalY=8.5;goalDistance=65;heading.textContent='Alle verdiepingen';description.textContent='Klik op een verdieping in het gebouw of kies er een uit het menu.';rooms.replaceChildren();}
  else{
-  goalY=index*height+1.2;goalDistance=27;
+  goalY=index*height+1.2;goalDistance=18;
   heading.textContent='Verdieping '+(index+1)+' · '+departments[index].name;
   description.textContent=departments[index].status;
   rooms.replaceChildren();
   for(const name of departments[index].rooms){const item=document.createElement('span');item.textContent=name;rooms.append(item);}
  }
- levels.forEach((g,i)=>{g.traverse(o=>{if(o.isMesh&&o.material?.emissive&&o.material!==glass)o.material.emissiveIntensity=0;});g.scale.setScalar(1)});
+ // Room view isolates the selected floor; overview shows the complete building.
  document.querySelectorAll('#floor-directory [data-floor]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.floor)===index)));
  const current=document.getElementById('floor-current');if(current)current.textContent=index<0?'Overzicht · alle vijf verdiepingen':heading.textContent;
  const toggle=document.getElementById('world-floor');if(toggle)toggle.textContent=index<0?'⌂ Alle verdiepingen':'⌂ Verdieping '+(index+1)+' / 5';
@@ -146,7 +172,13 @@ canvas.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-dra
 canvas.addEventListener('pointerup',e=>{
  if(!drag)return;const moved=drag.moved;drag=null;if(moved)return;
  const rect=canvas.getBoundingClientRect();mouse.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);
- raycaster.setFromCamera(mouse,camera);const hits=raycaster.intersectObjects(pickables,false);
+ raycaster.setFromCamera(mouse,camera);
+ if(selected>=0){
+  const hits=raycaster.intersectObjects(agentPickables,false);
+  const hit=hits.find(h=>h.object.userData.agent?.floor===selected);
+  if(hit){selectedAgent=hit.object.userData.agent.index;heading.textContent=agentLabels[selectedAgent];description.textContent=selected===0?'Bekijk de laatst gerapporteerde SEO-voorstellen van deze agent.':'Preview: deze agent is nog niet gekoppeld.';renderTasks();return;}
+ }
+ const hits=raycaster.intersectObjects(pickables.filter(p=>selected<0||p.userData.floor===selected),false);
  if(hits.length)selectFloor(hits[0].object.userData.floor);
 });
 canvas.addEventListener('pointercancel',()=>{drag=null});
@@ -156,7 +188,7 @@ new ResizeObserver(resize).observe(host);
 host.prepend(canvas);fallback.style.display='none';host.classList.add('three-active');
 document.querySelectorAll('.scene .label,.scene .agent-alert,.scene .manager-label').forEach(el=>{el.style.display='none'});
 const oldExperience=host.querySelector('.office-experience');if(oldExperience)oldExperience.remove();
-selectFloor(-1);resize();
+selectFloor(-1);resize();refreshAgentStatus();setInterval(refreshAgentStatus,60000);
 let last=0;
 function frame(t){
  const dt=Math.min(.08,(t-last)/1000||.016);last=t;
@@ -164,6 +196,8 @@ function frame(t){
  const angle=elevation+.28;
  camera.position.set(target.x+Math.sin(orbit)*distance*Math.cos(angle),target.y+Math.sin(angle)*distance,target.z+Math.cos(orbit)*distance*Math.cos(angle));
  camera.lookAt(target);
+ const seconds=t*.001;
+ agents.forEach(agent=>{agent.core.rotation.y=seconds*.7+agent.phase;agent.core.position.y=1.05+Math.sin(seconds*1.5+agent.phase)*.065;agent.ring.rotation.z=Math.sin(seconds*.65+agent.phase)*.13;});
  renderer.render(scene,camera);
  requestAnimationFrame(frame);
 }
