@@ -1,5 +1,6 @@
 /* Immersive Three.js SEO Office World. Visual-only, zero WordPress mutations. */
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js';
 
 const host = document.querySelector('.scene');
 const fallback = host?.querySelector('.world');
@@ -108,6 +109,16 @@ function character(color,atX,atZ){
  }
  return {g,legs,arms,shoes};
 }
+// Characters can be upgraded with locally licensed GLB avatars without altering SEO logic.
+const characterManifest = [
+ {key:'technical',model:'assets/agents/technical.glb'},
+ {key:'content',model:'assets/agents/content.glb'},
+ {key:'wordpress',model:'assets/agents/wordpress.glb'},
+ {key:'analytics',model:'assets/agents/analytics.glb'},
+ {key:'manager',model:'assets/agents/manager.glb'}
+];
+const characterMixers=[];
+const loader=new GLTFLoader();
 const characters=[
  character('#6498db',-4.5,-3.05),
  character('#aa8ed6',4.5,-3.05),
@@ -115,6 +126,34 @@ const characters=[
  character('#6ebda0',4.5,5.95),
  character('#536f99',0,2.1)
 ];
+// Load licensed rigged avatars only when provided. Missing files retain built-in 3D avatars.
+characterManifest.forEach((entry,i)=>{
+ loader.load(entry.model,gltf=>{
+   const actor=characters[i];
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const size=new THREE.Vector3();bounds.getSize(size);
+   if(!Number.isFinite(size.y)||size.y<.01)return;
+   model.scale.setScalar(1.95/size.y);
+   const updatedBounds=new THREE.Box3().setFromObject(model);
+   model.position.y=-updatedBounds.min.y;
+   model.traverse(obj=>{if(obj.isMesh){obj.castShadow=true;obj.receiveShadow=true}});
+   actor.g.add(model);
+   actor.g.children.forEach(child=>{if(child!==model)child.visible=false});
+   actor.model=model;
+   const mixer=new THREE.AnimationMixer(model);
+   const actions={};
+   gltf.animations.forEach(clip=>{
+     const name=clip.name.toLowerCase();
+     const kind=/walk|run/.test(name)?'walk':/sit|type|work|idle|talk/.test(name)?'idle':null;
+     if(kind&&!actions[kind])actions[kind]=mixer.clipAction(clip);
+   });
+   if(!actions.idle&&gltf.animations.length)actions.idle=mixer.clipAction(gltf.animations[0]);
+   actor.actions=actions;
+   actor.activeAction=null;
+   characterMixers.push(mixer);
+ },undefined,()=>{/* The included geometric character remains visible. */});
+});
 const paths=[
  [[-4.5,-3.05],[-4.5,-1.1],[-2.2,-1.1],[-4.5,-3.05]],
  [[4.5,-3.05],[4.5,-1.1],[2.2,-1.1],[4.5,-3.05]],
@@ -130,6 +169,7 @@ function updateCamera(){
 }
 function resize(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 const ro=new ResizeObserver(resize);ro.observe(host);resize();updateCamera();
+// Room expansion is visual-only. Never infer that an SEO agent exists from a rendered room.
 const floorButton=document.getElementById('world-floor');
 floorButton?.addEventListener('click',()=>{
  floorLevel=(floorLevel+1)%2;
@@ -170,8 +210,12 @@ canvas.addEventListener('click',e=>{
  if(key)document.querySelector('.label[data-agent="'+key+'"]')?.click();
 });
 let elapsed=0,last=0;
+const activity=['wandelt','werkt','overlegt'];
+const activityStatus=document.getElementById('world-activity');
+const clock=new THREE.Clock();
 function frame(t){
  const dt=Math.min(.06,(t-last)/1000||0);last=t;elapsed+=dt;
+ characterMixers.forEach(mixer=>mixer.update(dt));
  if(!reduce.matches){
  characters.forEach((person,i)=>{
   const path=paths[i],period=i===4?22:18+i*2;
@@ -182,11 +226,19 @@ function frame(t){
   const moving=Math.abs(b[0]-a[0])+Math.abs(b[1]-a[1])>.2;
   person.g.position.set(x,moving?.035*Math.sin(elapsed*11+i):0,z);
   if(moving)person.g.rotation.y=Math.atan2(b[0]-a[0],b[1]-a[1]);
+  if(person.actions){
+    const next=moving?(person.actions.walk||person.actions.idle):person.actions.idle;
+    if(next&&next!==person.activeAction){
+      if(person.activeAction)person.activeAction.fadeOut(.3);
+      next.reset().fadeIn(.3).play();person.activeAction=next;
+    }
+  }
   person.legs.forEach((leg,j)=>{leg.rotation.x=moving?Math.sin(elapsed*9+i+j*Math.PI)*.27:0});
   person.arms.forEach((arm,j)=>{arm.rotation.x=moving?Math.sin(elapsed*9+i+(1-j)*Math.PI)*.28:-.2});
   person.shoes.forEach((shoe,j)=>{shoe.position.z=moving?.1+Math.sin(elapsed*9+i+j*Math.PI)*.12:.1});
  });
  }
+ if(activityStatus&&Math.floor(elapsed)%6===0)activityStatus.textContent='3D-simulatie · medewerkers bewegen onafhankelijk van echte SEO-taken';
  renderer.render(scene,camera);
  requestAnimationFrame(frame);
 }
