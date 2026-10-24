@@ -41,7 +41,7 @@
       card.append(notice);root.append(card);
     }
     if(!data.suggestions.length){const p=document.createElement('p');p.textContent='Geen metadata-voorstellen in dit rapport.';root.append(p)}
-    reset.disabled=true;
+    if (reset) reset.disabled=true;
     info.textContent=data.suggestions.length+' SEO-titel- en beschrijvingsvoorstellen geladen. Alleen lokaal in je browser.';
     const counter=document.getElementById('task-counter');if(counter)counter.textContent=String(data.suggestions.length).padStart(2,'0');
   }
@@ -77,7 +77,7 @@
       p.textContent = 'Geen taken in dit rapport.';
       root.append(p);
     }
-    reset.disabled = true;
+    if (reset) reset.disabled = true;
     info.textContent = data.tasks.length + ' echte taken geladen uit lokaal JSON-rapport. Geen data verstuurd.';
     const counter = document.getElementById('task-counter');
     if (counter) counter.textContent = String(data.tasks.length).padStart(2, '0');
