@@ -5,6 +5,40 @@
   const root = document.getElementById('tasks');
   const reset = document.getElementById('reset');
   if (!fileInput || !root) return;
+  const dismissKey = 'seo-office-dismissed-v1';
+  let dismissed = {};
+  try { dismissed = JSON.parse(localStorage.getItem(dismissKey) || '{}') || {}; } catch { dismissed = {}; }
+  let activeReport = null;
+  function taskKey(prefix, url, issues) { return prefix + ':' + url + ':' + [...issues].sort().join('|'); }
+  function dismissCard(card, key, rerender) {
+    dismissed[key] = true;
+    try { localStorage.setItem(dismissKey, JSON.stringify(dismissed)); } catch {}
+    rerender();
+  }
+  function closeButton(card, key, rerender) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = '×';
+    button.title = 'Taak verbergen op dit apparaat';
+    button.setAttribute('aria-label', 'Taak verbergen');
+    button.style.cssText = 'position:absolute;top:10px;right:12px;border:0;background:transparent;color:#64748b;font-size:26px;line-height:1;cursor:pointer;padding:4px 9px';
+    card.style.position = 'relative';
+    card.style.paddingRight = '46px';
+    button.addEventListener('click', () => dismissCard(card, key, rerender));
+    card.append(button);
+  }
+  function restoreButton(rerender) {
+    if (!Object.keys(dismissed).some(k => dismissed[k])) return;
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'btn';
+    button.textContent = '↶ Verborgen taken terugzetten';
+    button.addEventListener('click', () => {
+      dismissed = {};
+      try { localStorage.removeItem(dismissKey); } catch {}
+      rerender();
+    });
+    root.append(button);
+  }
   const safeText = value => value == null ? 'Niet beschikbaar' : String(value);
   function line(parent, label, value) {
     const p = document.createElement('p');
@@ -25,9 +59,15 @@
     parent.append(button);
   }
   function renderCopyReport(data) {
+    activeReport = data;
     root.replaceChildren();
+    let visible = 0;
     for (const item of data.suggestions.filter(item => item.issues.some(x => ['long_title','missing_title','duplicate_title','long_meta_description','missing_meta_description','duplicate_meta_description'].includes(x)))) {
+      const key = taskKey('copy', item.url, item.issues);
+      if (dismissed[key]) continue;
+      visible++;
       const card = document.createElement('article');card.className='task';
+      closeButton(card, key, () => renderCopyReport(data));
       const heading=document.createElement('h3');heading.textContent='SEO-voorstel · '+item.url;card.append(heading);
       line(card,'Gevonden problemen',(item.issues||[]).join(', '));
       const issues = item.issues || [];
@@ -47,16 +87,22 @@
       notice.textContent='Alleen een concept op basis van bestaande metadata. Controleer inhoud en zoekintentie; plak zelf in WordPress/AIOSEO.';
       card.append(notice);root.append(card);
     }
-    if(!data.suggestions.length){const p=document.createElement('p');p.textContent='Geen metadata-voorstellen in dit rapport.';root.append(p)}
+    if(!visible){const p=document.createElement('p');p.textContent='Geen zichtbare SEO-voorstellen. Verborgen taken kun je hieronder terugzetten.';root.append(p)}
+    restoreButton(() => renderCopyReport(data));
     if (reset) reset.disabled=true;
-    info.textContent=data.suggestions.length+' SEO-titel- en beschrijvingsvoorstellen geladen. Alleen lokaal in je browser.';
-    const counter=document.getElementById('task-counter');if(counter)counter.textContent=String(data.suggestions.length).padStart(2,'0');
+    info.textContent=visible+' SEO-voorstellen zichtbaar. Kruisje verbergt een taak alleen op dit apparaat.';
+    const counter=document.getElementById('task-counter');if(counter)counter.textContent=String(visible).padStart(2,'0');
   }
   function renderReport(data) {
     root.replaceChildren();
+    let visible = 0;
     for (const task of data.tasks) {
+      const key = taskKey('inbox', task.page_url, [task.issue, task.proposed_changes?.field || '']);
+      if (dismissed[key]) continue;
+      visible++;
       const card = document.createElement('article');
       card.className = 'task';
+      closeButton(card, key, () => renderReport(data));
       const heading = document.createElement('h3');
       heading.textContent = safeText(task.agent) + ' · ' + safeText(task.issue);
       card.append(heading);
@@ -79,15 +125,16 @@
       card.append(notice);
       root.append(card);
     }
-    if (!data.tasks.length) {
+    if (!visible) {
       const p = document.createElement('p');
       p.textContent = 'Geen taken in dit rapport.';
       root.append(p);
     }
+    restoreButton(() => renderReport(data));
     if (reset) reset.disabled = true;
-    info.textContent = data.tasks.length + ' echte taken geladen uit lokaal JSON-rapport. Geen data verstuurd.';
+    info.textContent = visible + ' echte taken geladen uit lokaal JSON-rapport. Geen data verstuurd.';
     const counter = document.getElementById('task-counter');
-    if (counter) counter.textContent = String(data.tasks.length).padStart(2, '0');
+    if (counter) counter.textContent = String(visible).padStart(2, '0');
   }
   // Automatically show the latest sanitized public SEO proposals. Manual upload remains a fallback.
   async function loadLatestSuggestions() {
@@ -105,7 +152,7 @@
       }
       renderCopyReport(data);
       const updated = data.generated_at ? new Date(data.generated_at).toLocaleString('nl-BE') : 'onbekend';
-      info.textContent = data.suggestions.length + ' SEO-voorstellen automatisch geladen · rapport van ' + updated + ' · alleen lezen, zelf kopiëren naar WordPress.';
+      info.textContent = 'Automatisch SEO-rapport van ' + updated + ' · kruisje verbergt een taak op dit apparaat · geen WordPress-wijzigingen.';
     } catch (error) {
       info.textContent = 'Automatisch rapport nog niet beschikbaar. Je kunt voorlopig een JSON-bestand uploaden.';
     }
