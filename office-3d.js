@@ -42,6 +42,39 @@ const roomPositions=[[-4.5,-4.5],[4.5,-4.5],[-4.5,4.5],[4.5,4.5]];
 const roomNames=['Technical SEO Lab','Content Studio','WordPress Control','Analytics Lab'];
 const roomColors=['#6e9ee9','#ad9ce5','#e7b379','#7cc8b0'];
 const desks=[];
+const floorDirectory=[
+ {name:'SEO Operations',status:'SEO-data / simulatie',rooms:['Technical SEO','Content Studio','Analytics Lab','Manager Office']},
+ {name:'Social Media & Creative',status:'Toekomstige afdeling · preview',rooms:['Social Media','Content Creation','Video Studio','Campaign Planning']},
+ {name:'Customer Experience',status:'Toekomstige afdeling · preview',rooms:['Klantenservice','Live Chat','Customer Success','Support Manager']},
+ {name:'Marketing & Growth',status:'Toekomstige afdeling · preview',rooms:['Advertising','Email Marketing','CRO Lab','Growth Strategy']},
+ {name:'Executive & Innovation',status:'Toekomstige afdeling · preview',rooms:['Directie','Vergaderen','AI Innovation','Mission Control']}
+];
+const floorGroups=[];
+let selectedFloor=0;
+function buildPreviewFloor(index){
+ const layer=new THREE.Group();layer.position.y=index*5.4;layer.visible=false;root.add(layer);
+ cube(layer,17,.38,17,0,0,0,materials.floor);
+ cube(layer,17,.28,17,0,-.35,0,materials.edge);
+ const accents=['#8fa9cf','#b0a3d7','#7ab7b0','#d5b182','#94b5d5'];
+ const tint=mat(accents[index]);
+ for(let k=0;k<4;k++){
+  const x=k%2?4.4:-4.4,z=k<2?-4.4:4.4;
+  cube(layer,7,.12,.12,x,.1,z-3.45,materials.wall);
+  cube(layer,.12,.12,7,x-3.45,.1,z,materials.wall);
+  cube(layer,3.2,.15,1.5,x,.87,z,materials.wood);
+  for(const dx of [-1.3,1.3])for(const dz of [-.5,.5])cyl(layer,.05,.05,.72,x+dx,.45,z+dz,materials.edge);
+  cube(layer,1.15,.72,.08,x,1.5,z-.28,materials.dark);
+  cube(layer,1.03,.59,.025,x,1.5,z-.22,tint);
+  cube(layer,.12,.36,.12,x,1.03,z-.3,materials.edge);
+  cube(layer,1,.2,.8,x,.44,z+1.4,materials.dark);
+  cyl(layer,.29,.23,.48,x+2.3,.27,z+2.2,materials.pot);
+  ball(layer,.48,x+2.3,.84,z+2.2,materials.plant);
+ }
+ // Decorative glass lift core; not a functional agent travel simulation.
+ cube(layer,1.5,2.7,1.5,0,1.4,0,materials.glass,false);
+ cube(layer,1.65,.16,1.65,0,2.8,0,tint);
+ return layer;
+}
 const upperFloor = new THREE.Group();
 upperFloor.position.y = 5.4;
 upperFloor.visible = false;
@@ -171,16 +204,29 @@ function resize(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(
 const ro=new ResizeObserver(resize);ro.observe(host);resize();updateCamera();
 // Room expansion is visual-only. Never infer that an SEO agent exists from a rendered room.
 const floorButton=document.getElementById('world-floor');
-floorButton?.addEventListener('click',()=>{
- floorLevel=(floorLevel+1)%2;
- upperFloor.visible=Boolean(floorLevel);
- root.children.forEach(obj=>{if(obj!==upperFloor && obj.material && obj.material.transparent)obj.visible=!floorLevel});
- orbitTarget.y=floorLevel?5.4:0;
- distance=floorLevel?34:30;
+const floorPanel=document.getElementById('floor-directory');
+const floorTitle=document.getElementById('floor-current');
+for(let i=1;i<floorDirectory.length;i++)floorGroups[i]=buildPreviewFloor(i);
+function showFloor(index){
+ selectedFloor=index;
+ upperFloor.visible=false;
+ floorGroups.forEach(layer=>{if(layer)layer.visible=false});
+ // Hide original office objects on preview floors, preserve original scene.
+ root.children.forEach(child=>{
+  if(child===upperFloor||floorGroups.includes(child))return;
+  child.visible=index===0;
+ });
+ if(index>0)floorGroups[index].visible=true;
+ orbitTarget.y=index*5.4;
+ distance=index===0?30:34;
  updateCamera();
- floorButton.textContent=floorLevel?'⌂ Verdieping 2 · preview':'⌂ Begane grond';
- floorButton.setAttribute('aria-pressed',String(Boolean(floorLevel)));
-});
+ if(floorTitle)floorTitle.textContent='Verdieping '+(index+1)+' · '+floorDirectory[index].name;
+ if(floorButton)floorButton.textContent='⌂ Verdieping '+(index+1)+' / '+floorDirectory.length;
+ floorPanel?.querySelectorAll('[data-floor]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.floor)===index)));
+}
+floorButton?.addEventListener('click',()=>showFloor((selectedFloor+1)%floorDirectory.length));
+floorPanel?.querySelectorAll('[data-floor]').forEach(button=>button.addEventListener('click',()=>showFloor(Number(button.dataset.floor))));
+showFloor(0);
 function bind(id,fn){document.getElementById(id)?.addEventListener('click',fn)}
 bind('world-left',()=>{orbit-=.22;updateCamera()});
 bind('world-right',()=>{orbit+=.22;updateCamera()});
