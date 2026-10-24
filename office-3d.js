@@ -41,7 +41,7 @@ function cylinder(parent,r,h,x,y,z,material){
  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.85,h,12),material);
  m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;
 }
-const levels=[],pickables=[],agents=[],agentPickables=[];
+const levels=[],pickables=[],agents=[],agentPickables=[],walkers=[];
 const height=4.35;
 for(let i=0;i<5;i++){
  const y=i*height;
@@ -81,6 +81,24 @@ for(let i=0;i<5;i++){
   core.userData.agent={floor:i,index:j};ring.userData.agent={floor:i,index:j};
   agentPickables.push(core,ring);
   agents.push({floor:i,index:j,core,ring,terminal,phase:i*1.5+j*1.2});
+  // Procedural office staff, not the rejected Maya/Harper assets.
+  const person=new THREE.Group();group.add(person);
+  const clothes=mat(['#4679b3','#9879b4','#528c89','#c18e5c'][j]);
+  const trousers=mat('#354960'),skin=mat(['#dfab86','#a96f55','#efc39d','#bb896f'][j]);
+  const torso=cylinder(person,.28,.73,0,1.19,0,clothes);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.22,14,12),skin);head.position.y=1.79;person.add(head);
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(.225,14,10),mat(['#4d352d','#272b38','#80614d','#443a33'][j]));hair.scale.y=.45;hair.position.y=1.94;person.add(hair);
+  const limbs={arms:[],legs:[]};
+  for(const side of [-1,1]){
+   const arm=new THREE.Group();arm.position.set(side*.34,1.45,0);person.add(arm);
+   cylinder(arm,.085,.59,0,-.29,0,clothes);limbs.arms.push(arm);
+   const leg=new THREE.Group();leg.position.set(side*.15,.82,0);person.add(leg);
+   cylinder(leg,.105,.72,0,-.36,0,trousers);
+   cube(leg,.22,.13,.35,0,-.72,.09,dark);limbs.legs.push(leg);
+  }
+  person.userData.agent={floor:i,index:j};
+  person.traverse(obj=>{if(obj.isMesh){obj.userData.agent={floor:i,index:j};agentPickables.push(obj)}});
+  walkers.push({person,limbs,floor:i,index:j,phase:j*.72+i*.4,originX:x,originZ:1.85});
  }
  for(const x of [-7.5,7.5]){
   cylinder(group,.28,.47,x,.25,3.8,pot);
@@ -111,6 +129,12 @@ overlay.className='building-inspector';
 overlay.setAttribute('aria-label','Verdieping en taken');
 overlay.innerHTML='<div class="building-kicker">🏢 BEDRIJFSGEBOUW · 5 VERDIEPINGEN</div><h3 id="building-heading">Alle verdiepingen</h3><p id="building-description">Klik op een verdieping in het gebouw of kies er een uit het menu.</p><div id="building-rooms"></div><div class="building-task-title">Taken en status</div><div id="building-tasks" aria-live="polite">Kies een verdieping om de taken te bekijken.</div><button type="button" id="building-overview">↗ Toon volledig gebouw</button>';
 host.append(overlay);
+const overviewButton=document.createElement('button');
+overviewButton.id='building-back-global';overviewButton.type='button';
+overviewButton.textContent='← Volledig gebouw';
+overviewButton.setAttribute('aria-label','Terug naar overzicht van alle vijf verdiepingen');
+host.append(overviewButton);
+overviewButton.addEventListener('click',()=>selectFloor(-1));
 const heading=overlay.querySelector('#building-heading'),description=overlay.querySelector('#building-description'),rooms=overlay.querySelector('#building-rooms'),tasks=overlay.querySelector('#building-tasks');
 let selected=-1,selectedAgent=-1,orbit=-.52,elevation=.2,distance=65,goalDistance=65,goalY=8.5,light=0,roomMode=false;
 const target=new THREE.Vector3(0,8.5,0),raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
@@ -143,6 +167,7 @@ function renderTasks(){
 }
 function selectFloor(index){
  selected=index;selectedAgent=-1;roomMode=index>=0;
+ overviewButton.hidden=index<0;
  levels.forEach((g,i)=>{g.visible=index<0||i===index});
  foundation.visible=index<0;
  if(index<0){goalY=8.5;goalDistance=65;heading.textContent='Alle verdiepingen';description.textContent='Klik op een verdieping in het gebouw of kies er een uit het menu.';rooms.replaceChildren();}
@@ -198,6 +223,18 @@ function frame(t){
  camera.lookAt(target);
  const seconds=t*.001;
  agents.forEach(agent=>{agent.core.rotation.y=seconds*.7+agent.phase;agent.core.position.y=1.05+Math.sin(seconds*1.5+agent.phase)*.065;agent.ring.rotation.z=Math.sin(seconds*.65+agent.phase)*.13;});
+ walkers.forEach(w=>{
+  const cycle=(seconds*.15+w.phase)%1;
+  const walking=cycle<.7;
+  const u=walking?cycle/.7:1;
+  // Each person walks along their workstation aisle and pauses by the desk.
+  const z=w.originZ+(walking?Math.sin(u*Math.PI*2)*1.05:0);
+  const x=w.originX+(walking?Math.cos(u*Math.PI*2)*.48-.48:0);
+  w.person.position.set(x,walking?.035*Math.sin(seconds*11+w.phase):0,z);
+  w.person.rotation.y=walking?Math.atan2(-Math.sin(u*Math.PI*2)*.48,Math.cos(u*Math.PI*2)*1.05):Math.PI;
+  w.limbs.legs.forEach((limb,j)=>{limb.rotation.x=walking?Math.sin(seconds*9+w.phase+j*Math.PI)*.42:0});
+  w.limbs.arms.forEach((limb,j)=>{limb.rotation.x=walking?Math.sin(seconds*9+w.phase+(1-j)*Math.PI)*.33:-.18});
+ });
  renderer.render(scene,camera);
  requestAnimationFrame(frame);
 }
