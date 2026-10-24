@@ -1,7 +1,7 @@
 (() => {
   const panel = document.createElement('aside');
   panel.setAttribute('aria-live', 'polite');
-  panel.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:1000;max-width:310px;padding:12px 16px;border:1px solid #35506c;border-radius:12px;background:#14263b;color:#e1efff;font:12px/1.5 system-ui;box-shadow:0 8px 24px #0005';
+  panel.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:1000;max-width:310px;padding:12px 16px;border:1px solid #e2e9f2;border-radius:15px;background:#fffffff0;color:#516276;font:12px/1.5 -apple-system,BlinkMacSystemFont,system-ui;box-shadow:0 12px 32px #607b9c25;backdrop-filter:blur(18px)';
   panel.textContent = 'SEO-status wordt geladen...';
   document.body.appendChild(panel);
   async function refresh() {
