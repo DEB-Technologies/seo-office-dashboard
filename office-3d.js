@@ -180,7 +180,7 @@ characterManifest.forEach((entry,i)=>{
    const actions={};
    gltf.animations.forEach(clip=>{
      const name=clip.name.toLowerCase();
-     const kind=/walk|run/.test(name)?'walk':/sit|type|work|idle|talk/.test(name)?'idle':null;
+     const kind=/walk|run/.test(name)?'walk':/sit|chair/.test(name)?'sit':/type|work/.test(name)?'work':/idle|stand|talk/.test(name)?'idle':null;
      if(kind&&!actions[kind])actions[kind]=mixer.clipAction(clip);
    });
    if(!actions.idle&&gltf.animations.length)actions.idle=mixer.clipAction(gltf.animations.find(c=>/idle/i.test(c.name))||gltf.animations[0]);
@@ -195,6 +195,7 @@ characterManifest.forEach((entry,i)=>{
  });
  loadAvatar(entry.model,true);
 });
+const workstations=[[-4.5,-3.05],[4.5,-3.05],[-4.5,5.95],[4.5,5.95],[0,2.1]];
 const paths=[
  [[-4.5,-3.05],[-4.5,-1.1],[-2.2,-1.1],[-4.5,-3.05]],
  [[4.5,-3.05],[4.5,-1.1],[2.2,-1.1],[4.5,-3.05]],
@@ -273,15 +274,19 @@ function frame(t){
  if(!reduce.matches){
  characters.forEach((person,i)=>{
   const path=paths[i],period=i===4?22:18+i*2;
-  const segment=(elapsed/period*path.length+i*.45)%path.length;
+  const cycle=elapsed/(period+12)+i*.18;
+  const phase=cycle-Math.floor(cycle);
+  const working=phase>.56;
+  const segment=working?0:(phase/.56*(path.length-1));
   const k=Math.floor(segment),f=segment-k;
   const a=path[k],b=path[(k+1)%path.length];
   const x=a[0]+(b[0]-a[0])*f,z=a[1]+(b[1]-a[1])*f;
-  const moving=Math.abs(b[0]-a[0])+Math.abs(b[1]-a[1])>.2;
+  const moving=!working && Math.abs(b[0]-a[0])+Math.abs(b[1]-a[1])>.2;
   person.g.position.set(x,moving?.035*Math.sin(elapsed*11+i):0,z);
+  if(working)person.g.rotation.y=Math.PI;
   if(moving)person.g.rotation.y=Math.atan2(b[0]-a[0],b[1]-a[1]);
   if(person.actions){
-    const next=moving?(person.actions.walk||person.actions.idle):person.actions.idle;
+    const next=moving?(person.actions.walk||person.actions.idle):(person.actions.work||person.actions.sit||person.actions.idle);
     if(next&&next!==person.activeAction){
       if(person.activeAction)person.activeAction.fadeOut(.3);
       next.reset().fadeIn(.3).play();person.activeAction=next;
