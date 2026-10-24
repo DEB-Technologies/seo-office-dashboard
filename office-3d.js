@@ -144,13 +144,14 @@ function character(color,atX,atZ){
 }
 // Characters can be upgraded with locally licensed GLB avatars without altering SEO logic.
 const characterManifest = [
- {key:'technical',model:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/RobotExpressive/RobotExpressive.glb'},
- {key:'content',model:'assets/agents/content.glb'},
+ {key:'technical',model:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Soldier.glb'},
+ {key:'content',model:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Xbot.glb'},
  {key:'wordpress',model:'assets/agents/wordpress.glb'},
  {key:'analytics',model:'assets/agents/analytics.glb'},
  {key:'manager',model:'assets/agents/manager.glb'}
 ];
 const characterMixers=[];
+const modelLoading={loaded:0,failed:0};
 const loader=new GLTFLoader();
 const characters=[
  character('#6498db',-4.5,-3.05),
@@ -164,6 +165,7 @@ characterManifest.forEach((entry,i)=>{
  loader.load(entry.model,gltf=>{
    const actor=characters[i];
    const model=gltf.scene;
+   // Use external skeletal animation for human prototype; do not imply it is a photorealistic office avatar.
    const bounds=new THREE.Box3().setFromObject(model);
    const size=new THREE.Vector3();bounds.getSize(size);
    if(!Number.isFinite(size.y)||size.y<.01)return;
@@ -185,7 +187,9 @@ characterManifest.forEach((entry,i)=>{
    actor.actions=actions;
    actor.activeAction=null;
    characterMixers.push(mixer);
- },undefined,()=>{/* The included geometric character remains visible. */});
+   modelLoading.loaded++;
+   host.dataset.avatarStatus='loaded-'+modelLoading.loaded;
+ },undefined,()=>{modelLoading.failed++;host.dataset.avatarStatus='fallback-'+modelLoading.failed;});
 });
 const paths=[
  [[-4.5,-3.05],[-4.5,-1.1],[-2.2,-1.1],[-4.5,-3.05]],
