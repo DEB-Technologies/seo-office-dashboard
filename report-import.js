@@ -26,16 +26,23 @@
   }
   function renderCopyReport(data) {
     root.replaceChildren();
-    for (const item of data.suggestions) {
+    for (const item of data.suggestions.filter(item => item.issues.some(x => ['long_title','missing_title','duplicate_title','long_meta_description','missing_meta_description','duplicate_meta_description'].includes(x)))) {
       const card = document.createElement('article');card.className='task';
       const heading=document.createElement('h3');heading.textContent='SEO-voorstel · '+item.url;card.append(heading);
       line(card,'Gevonden problemen',(item.issues||[]).join(', '));
-      line(card,'Huidige SEO-titel',item.current_title||'Ontbreekt');
-      line(card,'Voorgestelde SEO-titel',item.proposed_title||'Nog handmatig opstellen');
-      copyButton(card,'SEO-titel',item.proposed_title);
-      line(card,'Huidige metabeschrijving',item.current_meta_description||'Ontbreekt');
-      line(card,'Voorgestelde metabeschrijving',item.proposed_meta_description||'Nog handmatig opstellen');
-      copyButton(card,'metabeschrijving',item.proposed_meta_description);
+      const issues = item.issues || [];
+      const titleIssue = issues.some(x => ['long_title','missing_title','duplicate_title'].includes(x));
+      const descIssue = issues.some(x => ['long_meta_description','missing_meta_description','duplicate_meta_description'].includes(x));
+      if (titleIssue) {
+        line(card,'Huidige SEO-titel',item.current_title||'Ontbreekt');
+        line(card,'Voorgestelde SEO-titel',item.proposed_title||'Nog handmatig opstellen');
+        copyButton(card,'SEO-titel',item.proposed_title);
+      }
+      if (descIssue) {
+        line(card,'Huidige metabeschrijving',item.current_meta_description||'Ontbreekt');
+        line(card,'Voorgestelde metabeschrijving',item.proposed_meta_description||'Nog handmatig opstellen');
+        copyButton(card,'metabeschrijving',item.proposed_meta_description);
+      }
       const notice=document.createElement('p');notice.className='result';
       notice.textContent='Alleen een concept op basis van bestaande metadata. Controleer inhoud en zoekintentie; plak zelf in WordPress/AIOSEO.';
       card.append(notice);root.append(card);
