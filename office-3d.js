@@ -144,8 +144,8 @@ function character(color,atX,atZ){
 }
 // Characters can be upgraded with locally licensed GLB avatars without altering SEO logic.
 const characterManifest = [
- {key:'technical',model:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Soldier.glb'},
- {key:'content',model:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Xbot.glb'},
+ {key:'technical',model:'assets/agents/harper.glb',fallbackModel:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Soldier.glb'},
+ {key:'content',model:'assets/agents/maya.glb',fallbackModel:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Xbot.glb'},
  {key:'wordpress',model:'assets/agents/wordpress.glb'},
  {key:'analytics',model:'assets/agents/analytics.glb'},
  {key:'manager',model:'assets/agents/manager.glb'}
@@ -162,7 +162,7 @@ const characters=[
 ];
 // Load licensed rigged avatars only when provided. Missing files retain built-in 3D avatars.
 characterManifest.forEach((entry,i)=>{
- loader.load(entry.model,gltf=>{
+ const loadAvatar=(url,allowFallback)=>loader.load(url,gltf=>{
    const actor=characters[i];
    const model=gltf.scene;
    // Use external skeletal animation for human prototype; do not imply it is a photorealistic office avatar.
@@ -189,7 +189,11 @@ characterManifest.forEach((entry,i)=>{
    characterMixers.push(mixer);
    modelLoading.loaded++;
    host.dataset.avatarStatus='loaded-'+modelLoading.loaded;
- },undefined,()=>{modelLoading.failed++;host.dataset.avatarStatus='fallback-'+modelLoading.failed;});
+ },undefined,()=>{
+   if(allowFallback&&entry.fallbackModel){loadAvatar(entry.fallbackModel,false);return}
+   modelLoading.failed++;host.dataset.avatarStatus='fallback-'+modelLoading.failed;
+ });
+ loadAvatar(entry.model,true);
 });
 const paths=[
  [[-4.5,-3.05],[-4.5,-1.1],[-2.2,-1.1],[-4.5,-3.05]],
