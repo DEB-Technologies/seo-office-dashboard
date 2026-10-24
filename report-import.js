@@ -13,6 +13,38 @@
     p.append(b, document.createTextNode(safeText(value)));
     parent.append(p);
   }
+  function copyButton(parent, label, value) {
+    if (typeof value !== 'string' || !value.trim()) return;
+    const button = document.createElement('button');
+    button.type = 'button';button.className = 'btn';
+    button.textContent = '📋 Kopieer ' + label;
+    button.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(value); button.textContent = '✓ Gekopieerd'; }
+      catch { button.textContent = 'Kopiëren mislukt · selecteer de tekst'; }
+    });
+    parent.append(button);
+  }
+  function renderCopyReport(data) {
+    root.replaceChildren();
+    for (const item of data.suggestions) {
+      const card = document.createElement('article');card.className='task';
+      const heading=document.createElement('h3');heading.textContent='SEO-voorstel · '+item.url;card.append(heading);
+      line(card,'Gevonden problemen',(item.issues||[]).join(', '));
+      line(card,'Huidige SEO-titel',item.current_title||'Ontbreekt');
+      line(card,'Voorgestelde SEO-titel',item.proposed_title||'Nog handmatig opstellen');
+      copyButton(card,'SEO-titel',item.proposed_title);
+      line(card,'Huidige metabeschrijving',item.current_meta_description||'Ontbreekt');
+      line(card,'Voorgestelde metabeschrijving',item.proposed_meta_description||'Nog handmatig opstellen');
+      copyButton(card,'metabeschrijving',item.proposed_meta_description);
+      const notice=document.createElement('p');notice.className='result';
+      notice.textContent='Alleen een concept op basis van bestaande metadata. Controleer inhoud en zoekintentie; plak zelf in WordPress/AIOSEO.';
+      card.append(notice);root.append(card);
+    }
+    if(!data.suggestions.length){const p=document.createElement('p');p.textContent='Geen metadata-voorstellen in dit rapport.';root.append(p)}
+    reset.disabled=true;
+    info.textContent=data.suggestions.length+' SEO-titel- en beschrijvingsvoorstellen geladen. Alleen lokaal in je browser.';
+    const counter=document.getElementById('task-counter');if(counter)counter.textContent=String(data.suggestions.length).padStart(2,'0');
+  }
   function renderReport(data) {
     root.replaceChildren();
     for (const task of data.tasks) {
@@ -32,6 +64,7 @@
         line(card, 'Veld', task.proposed_changes.field);
         line(card, 'Huidig', task.proposed_changes.before);
         line(card, 'Voorstel', task.proposed_changes.after);
+        copyButton(card, task.proposed_changes.field === 'title' ? 'SEO-titel' : task.proposed_changes.field === 'meta_description' ? 'metabeschrijving' : 'voorstel', task.proposed_changes.after);
       }
       const notice = document.createElement('p');
       notice.className = 'result';
@@ -55,6 +88,14 @@
     try {
       if (file.size > 2_000_000) throw new Error('Bestand is groter dan 2 MB.');
       const data = JSON.parse(await file.text());
+      if (data && data.site_id === 'autodaktenten' && data.mode === 'read_only' && Array.isArray(data.suggestions)) {
+        if (data.suggestions.length > 500 || data.suggestions.some(item => !item || typeof item.url !== 'string' ||
+          !item.url.startsWith('https://autodaktenten.be/') ||
+          !Array.isArray(item.issues) || ['proposed_title','proposed_meta_description'].some(k => item[k] != null && typeof item[k] !== 'string'))) {
+          throw new Error('Ongeldig SEO-voorstellenrapport.');
+        }
+        renderCopyReport(data);return;
+      }
       if (!data || data.site !== 'autodaktenten.be' || data.mode !== 'review_only' ||
           !Array.isArray(data.tasks) || data.tasks.length > 500 ||
           data.tasks.some(t => !t || typeof t.page_url !== 'string' ||
